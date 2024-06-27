@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const PORT = 9000;
 
 //AREA ROUTERS
+const userRouter = require("./router/userRoutes");
 
 //AREA SWAGGER
 
@@ -43,7 +44,7 @@ db.on("disconnected", () => {
 //AREA DE COMPORTAMIENTO
 
 //CONTROLLERS
-
+app.use("/signup", userRouter);
 //SWAGGER
 
 //NECESARIOS
