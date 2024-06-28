@@ -1,3 +1,4 @@
+const generateToken = require("../core/auth/middleware/auth");
 const user = require("../models/userModels");
 const bcrypt = require("bcrypt");
 

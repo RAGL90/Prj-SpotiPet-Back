@@ -1,5 +1,5 @@
 //AREA DE CONFIGURACION
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config();
 
 //DECLARACION DE LIBRERIAS
 const express = require("express");
@@ -45,6 +45,7 @@ db.on("disconnected", () => {
 
 //CONTROLLERS
 app.use("/signup", userRouter);
+
 //SWAGGER
 
 //NECESARIOS
