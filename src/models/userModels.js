@@ -20,7 +20,7 @@ const userSchema = new Schema({
     type: String,
     require: true,
     enum: ["adopter", "admin"],
-    default: "user",
+    default: "adopter",
   },
   username: {
     type: String,
@@ -41,6 +41,6 @@ const userSchema = new Schema({
   },
 });
 
-const user = mongoose.model("Users", userSchema, "User");
+const userModel = mongoose.model("Users", userSchema, "User");
 
-module.exports = user;
+module.exports = userModel;

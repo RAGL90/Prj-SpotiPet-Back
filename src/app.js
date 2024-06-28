@@ -44,7 +44,7 @@ db.on("disconnected", () => {
 //AREA DE COMPORTAMIENTO
 
 //CONTROLLERS
-app.use("/signup", userRouter);
+app.use("/user", userRouter);
 
 //SWAGGER
 
