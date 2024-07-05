@@ -2,6 +2,7 @@ const generateToken = require("../core/auth/middleware/auth");
 const userModel = require("../models/userModels");
 const bcrypt = require("bcrypt");
 
+//REGISTRO DE USUARIO
 const signup = async (req, res) => {
   try {
     const { email, pswd, userType, username, lastname, animalLimit } = req.body;
@@ -31,7 +32,7 @@ const signup = async (req, res) => {
   }
 };
 
-//Función panel de admins:
+//OBTENCIÓN DE USUARIOS PARA ADMIN, falta añadir control admin
 const getUser = async (req, res) => {
   try {
     const users = await userModel.find();
@@ -49,6 +50,7 @@ const getUser = async (req, res) => {
   }
 };
 
+//LOGUEO Y VERIFICACION DE USUARIO
 const login = async (req, res) => {
   try {
     const { email, pswd } = req.body;
@@ -76,6 +78,7 @@ const login = async (req, res) => {
       {
         userId: user.id,
         email: user.email,
+        userType: user.userType,
         name: user.name, //Puede no tener name
       },
       false //Es un token de refresco
@@ -85,6 +88,7 @@ const login = async (req, res) => {
       {
         userId: user.id,
         email: user.email,
+        userType: user.userType,
         name: user.name, //Puede no tener name
       },
       true //Es un token de refresco
@@ -109,4 +113,44 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, getUser };
+// ******* ACCIONES USUARIO LOGUEADO *********
+
+/*
+Contenido del Payload:
+ - ID del usuario.
+ - Email
+ - User Name.
+ */
+
+const modifyMail = async (req, res) => {
+  try {
+    const userOldEmail = req.user.email;
+    const user = await userModel.findOne({ email: userOldEmail });
+
+    if (!req.body.email || typeof req.body.email !== "string") {
+      return res.status(400).json({
+        status: "failed",
+        message: "Email no proporcionado o con formato no válido",
+      });
+    }
+
+    const newEmail = req.body;
+    user.email = newEmail.email;
+    console.log(user.email);
+    await user.save();
+
+    res.status(201).json({
+      status: "success",
+      message: "Email modificado correctamente",
+      error: null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      error: "Error al modificar el Email",
+      message: error.message,
+    });
+  }
+};
+
+module.exports = { signup, login, getUser, modifyMail };
