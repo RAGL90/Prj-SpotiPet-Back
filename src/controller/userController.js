@@ -134,6 +134,14 @@ const modifyMail = async (req, res) => {
       });
     }
 
+    if (!user) {
+      return res.status(404).json({
+        status: "failed",
+        message:
+          "Datos de login no localizado, por favor, vuelva a ingresar usuario y contraseña",
+      });
+    }
+
     const newEmail = req.body;
     user.email = newEmail.email;
     console.log(user.email);
