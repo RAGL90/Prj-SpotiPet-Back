@@ -120,45 +120,57 @@ Contenido del Payload:
  - ID del usuario.
  - Email
  - User Name.
- */
+*/
 
-const modifyMail = async (req, res) => {
+const modifyUser = async (req, res) => {
   try {
-    const userOldEmail = req.user.email;
-    const user = await userModel.findOne({ email: userOldEmail });
-
-    if (!req.body.email || typeof req.body.email !== "string") {
-      return res.status(400).json({
-        status: "failed",
-        message: "Email no proporcionado o con formato no válido",
-      });
-    }
+    const idByMail = req.user.email;
+    let user = await userModel.findOne({ email: idByMail });
 
     if (!user) {
       return res.status(404).json({
         status: "failed",
         message:
-          "Datos de login no localizado, por favor, vuelva a ingresar usuario y contraseña",
+          "Usuario no encontrado, por favor, vuelva a ingresar usuario y contraseña",
       });
     }
 
-    const newEmail = req.body;
-    user.email = newEmail.email;
-    console.log(user.email);
-    await user.save();
+    const newUserData = req.body;
+
+    // Actualiza los campos solo si se proporcionan en newUserData
+    user.email = newUserData.email || user.email;
+    user.username = newUserData.username || user.username;
+    user.lastname = newUserData.lastname || user.lastname;
+    user.age = newUserData.age || user.age;
+
+    if (newUserData.userType || newUserData.animalLimit) {
+      return res.status(401).json({
+        status: "failed",
+        message: "Petición no autorizada",
+      });
+    }
+
+    await user.save(); // Guarda los cambios en la base de datos
+    console.log(`Se han guardado los siguientes datos:
+      Email de usuario: ${user.email}
+      Nombre de usuario: ${user.username}
+      Apellidos de usuario: ${user.lastname}
+      Edad del usuario: ${user.age}
+    `);
 
     res.status(201).json({
       status: "success",
-      message: "Email modificado correctamente",
+      message: "Datos del usuario modificados correctamente",
       error: null,
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({
       status: "failed",
-      error: "Error al modificar el Email",
+      error: "Error al modificar los datos del usuario",
       message: error.message,
     });
   }
 };
 
-module.exports = { signup, login, getUser, modifyMail };
+module.exports = { signup, login, getUser, modifyUser };

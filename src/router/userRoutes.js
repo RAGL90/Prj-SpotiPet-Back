@@ -6,13 +6,13 @@ const {
   signup,
   getUser,
   login,
-  modifyMail,
+  modifyUser,
 } = require("../controller/userController");
 
 router.get("/", getUser); // OK!
 router.post("/signup", signup); // OK! /user/signup.
 router.post("/login", login); //OK! /user/login.
 
-router.patch("/user-panel", verifyToken, modifyMail);
+router.patch("/user-panel", verifyToken, modifyUser);
 
 module.exports = router;

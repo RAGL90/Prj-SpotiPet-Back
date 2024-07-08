@@ -30,6 +30,11 @@ const userSchema = new Schema({
     type: String,
     require: false,
   },
+  age: {
+    type: Number,
+    require: false,
+    default: 0,
+  },
   animalLimit: {
     type: Number,
     require: true,
