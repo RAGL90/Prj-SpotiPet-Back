@@ -1,3 +1,4 @@
+const NIFverifier = require("../core/utils/NIFverifier");
 const shelterModel = require("../models/shelterModel");
 
 const bcrypt = require("bcrypt");
@@ -14,10 +15,10 @@ const signUpShelter = async (req, res) => {
       direccion,
       telefono,
       email,
-      password,
+      pswd,
     } = req.body;
 
-    Shelter = new shelterModel({
+    const newShelter = new shelterModel({
       tipoNIF,
       NIF,
       nombre,
@@ -27,6 +28,29 @@ const signUpShelter = async (req, res) => {
       telefono,
       email,
       pswd: await bcrypt.hash(pswd, 10),
+      tipoAsociacion,
+      raro,
     });
-  } catch (error) {}
+
+    const control = NIFverifier(tipoNIF, NIF);
+    if (!control) {
+      res.status(400).json({
+        status: "failed",
+        message: "NIF no válido, inténtelo de nuevo",
+      });
+    }
+    if (tipoNIF === "CIF") {
+      newShelter.raro = control.raro;
+      newShelter.tipoAsociacion = control.tipoAsociacion;
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "failed",
+      message: "No se pudo crear la nueva protectora",
+      error: error.message,
+    });
+  }
 };
+
+module.exports = { signUpShelter };

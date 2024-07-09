@@ -62,7 +62,7 @@ const provincias = [
 const shelterSchema = new Schema({
   tipoNIF: {
     type: String,
-    enum: ["DNI", "NIE", "Asociación", "Sociedad"],
+    enum: ["DNI", "NIE", "CIF"],
     required: true,
   },
   NIF: {
@@ -130,6 +130,14 @@ const shelterSchema = new Schema({
     required: [true, "La contraseña es obligatoria, al menos 8 caracteres"],
     trim: true,
     minLength: 8,
+  },
+  tipoAsociacion: {
+    type: String,
+    default: "",
+  },
+  raro: {
+    type: Boolean,
+    default: false,
   },
 });
 
