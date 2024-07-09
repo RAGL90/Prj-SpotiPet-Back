@@ -1,4 +1,10 @@
 const NIFverifier = (tipoNIF, NIF) => {
+  let response = {
+    valid: false,
+    invalid: "",
+    tipoAsociacion: "",
+    raro: false,
+  };
   if (tipoNIF === "DNI") {
     const letrasControl = "TRWAGMYFPDXBNJZSQVHLCKE";
 
@@ -6,15 +12,20 @@ const NIFverifier = (tipoNIF, NIF) => {
     const letra = NIF.charAt(NIF.length - 1).toUpperCase(); // Corrección aquí: cambié dni.length a NIF.length
 
     if (!/^\d{8}[A-Za-z]$/.test(NIF)) {
-      return false;
+      response.invalid = "Formato de DNI no válido";
+      return response;
     }
 
     const indice = parseInt(numero) % 23; // Asegúrate de convertir el número a entero
 
     if (letrasControl.charAt(indice) === letra) {
-      return true;
+      response.valid = true;
+      response.tipoAsociacion = "DNI";
+      response.raro = true;
+      return response;
     } else {
-      return false;
+      response.invalid = "DNI inválido, revise las cifras y letras";
+      return response;
     }
   }
 
@@ -24,7 +35,7 @@ const NIFverifier = (tipoNIF, NIF) => {
 
     // Comprobamos el formato con la expresión regular adecuada
     if (!/^[XYZ]\d{7}[A-Za-z]$/.test(NIF)) {
-      console.log("Formato NIE incorrecto");
+      response.invalid = "Formato NIE incorrecto, revise el NIE";
       return false;
     }
 
@@ -58,90 +69,89 @@ const NIFverifier = (tipoNIF, NIF) => {
     const control = parseInt(numero) % 23;
 
     if (letrasControl.charAt(control) === letra) {
-      return true;
+      response.valid = true;
+      response.tipoAsociacion = "NIE";
+      response.raro = true;
+      return response;
     } else {
-      return false;
+      response.invalid = "NIE no válido repase cifras y letras";
+      return response;
     }
   }
 
   if (tipoNIF === "CIF") {
-    let cifObject = {
-      valid: false,
-      tipoAsociacion: "",
-      raro: false,
-    };
     let letra = NIF.charAt(0).toUpperCase();
 
     if (!/^[A-Za-z]\d{8}$/.test(NIF)) {
       console.log("Formato NIE incorrecto");
       return false;
     }
-    // Si ha pasado el formateador , se le da por bueno
+    // Si ha pasado el formateador , aceptaremos como válido el CIF
 
-    cifObject.valid = true;
+    response.valid = true;
 
-    //************************************************ Tipos de Sociedades
+    //*************************************Clasificamos según Tipos de Sociedades
 
     switch (letra) {
       case "G":
-        cifObject.tipoAsociacion = "Asociaciones";
+        response.tipoAsociacion = "Asociaciones";
         break;
       case "A":
-        cifObject.tipoAsociacion = "Sociedad Anonima";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad Anonima";
+        response.raro = true;
         break;
 
       case "B":
-        cifObject.tipoAsociacion = "Sociedad Limitada";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad Limitada";
+        response.raro = true;
         break;
 
       case "C":
-        cifObject.tipoAsociacion = "Sociedades colectivas";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad colectiva";
+        response.raro = true;
         break;
 
       case "D":
-        cifObject.tipoAsociacion = "Sociedades comanditarias";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad comanditaria";
+        response.raro = true;
         break;
 
       case "E":
-        cifObject.tipoAsociacion = "Comunidades de bienes";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Comunidad de bienes";
+        response.raro = true;
         break;
 
       case "F":
-        cifObject.tipoAsociacion = "Sociedades cooperativas";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad cooperativas";
+        response.raro = true;
         break;
 
       case "H":
-        cifObject.tipoAsociacion = "Comunidades de propietarios";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Comunidad de propietarios";
+        response.raro = true;
         break;
 
       case "J":
-        cifObject.tipoAsociacion = "Sociedades civiles";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad civiles";
+        response.raro = true;
         break;
 
       case "P":
-        cifObject.tipoAsociacion = "Sociedades civiles";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Sociedad civiles";
+        response.raro = true;
         break;
 
       case "Q":
-        cifObject.tipoAsociacion = "Organismo Publico";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Organismo Publico";
+        response.raro = true;
         break;
 
       default:
-        cifObject.tipoAsociacion = "Otros";
-        cifObject.raro = true;
+        response.tipoAsociacion = "Otros";
+        response.raro = true;
         break;
     }
-    return cifObject;
+    return response;
   }
 };
 

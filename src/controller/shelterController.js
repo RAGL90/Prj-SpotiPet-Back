@@ -17,6 +17,8 @@ const signUpShelter = async (req, res) => {
       email,
       pswd,
     } = req.body;
+    const tipoAsociacion = "";
+    const raro = false;
 
     const newShelter = new shelterModel({
       tipoNIF,
@@ -33,16 +35,27 @@ const signUpShelter = async (req, res) => {
     });
 
     const control = NIFverifier(tipoNIF, NIF);
-    if (!control) {
+
+    console.log(`Se ha revisado el CIF es:
+      Tipo de asociación: ${control.tipoAsociacion}
+      Es raro? ${control.raro}`);
+
+    if (!control.valid) {
       res.status(400).json({
         status: "failed",
-        message: "NIF no válido, inténtelo de nuevo",
+        message: control.invalid,
       });
     }
-    if (tipoNIF === "CIF") {
-      newShelter.raro = control.raro;
-      newShelter.tipoAsociacion = control.tipoAsociacion;
-    }
+    newShelter.raro = control.raro;
+    newShelter.tipoAsociacion = control.tipoAsociacion;
+
+    await newShelter.save();
+
+    res.status(201).json({
+      status: "Success",
+      message: "Protectora guardada correctamente",
+      newShelter,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({

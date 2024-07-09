@@ -134,10 +134,12 @@ const shelterSchema = new Schema({
   tipoAsociacion: {
     type: String,
     default: "",
+    require: false,
   },
   raro: {
     type: Boolean,
     default: false,
+    require: false,
   },
 });
 
