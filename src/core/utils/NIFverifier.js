@@ -1,7 +1,7 @@
 const NIFverifier = (tipoNIF, NIF) => {
   let response = {
     valid: false,
-    invalid: "",
+    invalidCause: "",
     tipoAsociacion: "",
     raro: false,
   };
@@ -12,7 +12,7 @@ const NIFverifier = (tipoNIF, NIF) => {
     const letra = NIF.charAt(NIF.length - 1).toUpperCase(); // Corrección aquí: cambié dni.length a NIF.length
 
     if (!/^\d{8}[A-Za-z]$/.test(NIF)) {
-      response.invalid = "Formato de DNI no válido";
+      response.invalidCause = "Formato de DNI no válido";
       return response;
     }
 
@@ -24,7 +24,7 @@ const NIFverifier = (tipoNIF, NIF) => {
       response.raro = true;
       return response;
     } else {
-      response.invalid = "DNI inválido, revise las cifras y letras";
+      response.invalidCause = "DNI inválido, revise las cifras y letras";
       return response;
     }
   }
@@ -35,8 +35,8 @@ const NIFverifier = (tipoNIF, NIF) => {
 
     // Comprobamos el formato con la expresión regular adecuada
     if (!/^[XYZ]\d{7}[A-Za-z]$/.test(NIF)) {
-      response.invalid = "Formato NIE incorrecto, revise el NIE";
-      return false;
+      response.invalidCause = "Formato NIE incorrecto, revise el NIE";
+      return response;
     }
 
     // Convertimos la letra inicial en el número correspondiente
@@ -74,7 +74,7 @@ const NIFverifier = (tipoNIF, NIF) => {
       response.raro = true;
       return response;
     } else {
-      response.invalid = "NIE no válido repase cifras y letras";
+      response.invalidCause = "NIE no válido repase cifras y letras";
       return response;
     }
   }

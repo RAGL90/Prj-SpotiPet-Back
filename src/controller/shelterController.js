@@ -1,4 +1,5 @@
 const NIFverifier = require("../core/utils/NIFverifier");
+const timeStamp = require("../core/utils/timeStamp");
 const shelterModel = require("../models/shelterModel");
 
 const bcrypt = require("bcrypt");
@@ -36,26 +37,30 @@ const signUpShelter = async (req, res) => {
 
     const control = NIFverifier(tipoNIF, NIF);
 
-    console.log(`Se ha revisado el CIF es:
-      Tipo de asociación: ${control.tipoAsociacion}
-      Es raro? ${control.raro}`);
-
     if (!control.valid) {
       res.status(400).json({
         status: "failed",
-        message: control.invalid,
+        message: control.invalidCause,
       });
     }
-    newShelter.raro = control.raro;
-    newShelter.tipoAsociacion = control.tipoAsociacion;
 
-    await newShelter.save();
+    if (control.valid) {
+      newShelter.raro = control.raro;
+      newShelter.tipoAsociacion = control.tipoAsociacion;
 
-    res.status(201).json({
-      status: "Success",
-      message: "Protectora guardada correctamente",
-      newShelter,
-    });
+      await newShelter.save();
+
+      const time = timeStamp();
+      console.log(
+        `${time} Protectora ${newShelter.nombre} registrada correctamente`
+      );
+
+      res.status(201).json({
+        status: "Success",
+        message: "Protectora guardada correctamente",
+        newShelter,
+      });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({
