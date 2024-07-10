@@ -1,4 +1,5 @@
 const generateToken = require("../core/auth/middleware/auth");
+const timeStamp = require("../core/utils/timeStamp");
 const userModel = require("../models/userModels");
 const bcrypt = require("bcrypt");
 
@@ -17,6 +18,8 @@ const signup = async (req, res) => {
     });
 
     await newUser.save();
+    const time = timeStamp();
+    console.log(`${time} Usuario ${newUser.email} registrado correctamente`);
 
     res.status(201).json({
       status: "succeed",
