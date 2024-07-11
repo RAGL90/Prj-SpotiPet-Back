@@ -30,6 +30,18 @@ const userSchema = new Schema({
     type: String,
     require: false,
   },
+  tipoNIF: {
+    type: String,
+    enum: ["DNI", "NIE", ""], //Las empresas no serán NIF elegibles en la solicitud
+    required: false,
+    default: "",
+  },
+  NIF: {
+    type: String,
+    require: false,
+    unique: true,
+    default: "",
+  },
   age: {
     type: Number,
     require: false,

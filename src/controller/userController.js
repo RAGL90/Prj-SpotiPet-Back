@@ -1,4 +1,5 @@
 const generateToken = require("../core/auth/middleware/auth");
+const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
 const userModel = require("../models/userModels");
 const bcrypt = require("bcrypt");
@@ -6,7 +7,17 @@ const bcrypt = require("bcrypt");
 //REGISTRO DE USUARIO
 const signup = async (req, res) => {
   try {
-    const { email, pswd, userType, username, lastname, animalLimit } = req.body;
+    const {
+      email,
+      pswd,
+      userType,
+      username,
+      lastname,
+      animalLimit,
+      tipoNIF,
+      NIF,
+      age,
+    } = req.body;
 
     const newUser = new userModel({
       email,
@@ -14,18 +25,52 @@ const signup = async (req, res) => {
       userType,
       username,
       lastname,
+      tipoNIF,
+      NIF,
+      age,
       animalLimit,
     });
 
-    await newUser.save();
-    const time = timeStamp();
-    console.log(`${time} Usuario ${newUser.email} registrado correctamente`);
+    let NIFfacilitado = false;
 
-    res.status(201).json({
-      status: "succeed",
-      message: "Usuario creado correctamente",
-      newUser,
-    });
+    if (tipoNIF === "DNI" || tipoNIF === "NIE") {
+      NIFfacilitado = true;
+
+      const control = NIFverifier(tipoNIF, NIF);
+
+      if (!control.valid) {
+        res.status(400).json({
+          status: "failed",
+          message: control.invalidCause,
+        });
+      } else {
+        await newUser.save();
+        const time = timeStamp();
+        console.log(
+          `${time} Usuario ${newUser.email} registrado correctamente`
+        );
+
+        res.status(201).json({
+          status: "succeed",
+          message: "Usuario creado correctamente",
+          newUser,
+        });
+      }
+    }
+
+    if (NIFfacilitado === false) {
+      //El usuario ha preferido no dar su NIF, se procede con el registro
+      await newUser.save();
+      const time = timeStamp();
+      console.log(
+        `${time} Usuario ${newUser.email} registrado correctamente (sin NIF)`
+      );
+      res.status(201).json({
+        status: "succeed",
+        message: "Usuario creado correctamente",
+        newUser,
+      });
+    }
   } catch (error) {
     res.status(500).json({
       status: "failed",

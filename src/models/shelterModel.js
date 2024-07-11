@@ -141,6 +141,16 @@ const shelterSchema = new Schema({
     default: false,
     require: false,
   },
+  web: {
+    type: String,
+    default: "",
+    require: false,
+  },
+  socialMedia: {
+    type: [String],
+    default: [""],
+    require: false,
+  },
 });
 
 const shelterModel = mongoose.model("shelter", shelterSchema, "shelter");
