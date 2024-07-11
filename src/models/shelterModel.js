@@ -67,18 +67,18 @@ const shelterSchema = new Schema({
   },
   NIF: {
     type: String,
-    unique: true,
+    unique: [true, "Este NIF ya ha sido registrado"],
     trim: true,
     required: [
       true,
       "El NIF es obligatorio para la realización de solicitudes",
     ],
   },
-  nombre: {
+  name: {
     type: String,
     required: [true, "El nombre de la protectora es obligatorio"],
   },
-  provincia: {
+  province: {
     type: String,
     required: [
       true,
@@ -90,27 +90,30 @@ const shelterSchema = new Schema({
     },
     trim: true,
   },
-  localidad: {
+  locality: {
     type: String,
     required: [
       true,
-      "La localidad es necesaria para ayudar a los usuarios a localizarte",
+      "La localidad es necesaria para ayudar a los posibles adoptantes a su recogida",
     ],
   },
-  direccion: {
+  adress: {
     type: String,
     required: [
       true,
       "Facilitar el campo para que el usuario pueda recoger personalmente a su nueva mascota si lo desea",
     ],
   },
-  telefono: {
-    type: Number,
-    require: [
+  phone: {
+    type: String,
+    required: [
       true,
-      "El teléfono es necesario para facilitar el contacto con el posible adoptante",
+      "El telefono es necesario para facilitar el contacto con el posible adoptante",
     ],
-    trim: true,
+    match: [
+      /^[679]\d{8}$/,
+      "Numero de telefono incorrecto, no es necesario indicar el prefijo (+34)",
+    ],
     unique: true,
     minLength: 9,
   },
@@ -132,24 +135,26 @@ const shelterSchema = new Schema({
     minLength: 8,
   },
   tipoAsociacion: {
+    //Lo determina el sistema en función del NIF
     type: String,
     default: "",
-    require: false,
+    required: false,
   },
-  raro: {
+  uncommon: {
+    //Lo determina el sistema en función del NIF
     type: Boolean,
     default: false,
-    require: false,
+    required: false,
   },
   web: {
     type: String,
     default: "",
-    require: false,
+    required: false,
   },
   socialMedia: {
     type: [String],
-    default: [""],
-    require: false,
+    default: [],
+    required: false,
   },
 });
 

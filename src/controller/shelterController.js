@@ -10,29 +10,35 @@ const signUpShelter = async (req, res) => {
     const {
       tipoNIF,
       NIF,
-      nombre,
-      provincia,
-      localidad,
-      direccion,
-      telefono,
+      name,
+      province,
+      locality,
+      adress,
+      phone,
       email,
       pswd,
+      web,
+      socialMedia,
     } = req.body;
+    //Declaramos variables para el sistema
     const tipoAsociacion = "";
-    const raro = false;
+    const uncommon = false;
+    //uncommon => Aquellos registros que no sean asociaciones en su CIF.
 
     const newShelter = new shelterModel({
       tipoNIF,
       NIF,
-      nombre,
-      provincia,
-      localidad,
-      direccion,
-      telefono,
+      name,
+      province,
+      locality,
+      adress,
+      phone,
       email,
       pswd: await bcrypt.hash(pswd, 10),
       tipoAsociacion,
-      raro,
+      uncommon,
+      web,
+      socialMedia,
     });
 
     const control = NIFverifier(tipoNIF, NIF);
@@ -45,14 +51,14 @@ const signUpShelter = async (req, res) => {
     }
 
     if (control.valid) {
-      newShelter.raro = control.raro;
+      newShelter.uncommon = control.raro;
       newShelter.tipoAsociacion = control.tipoAsociacion;
 
       await newShelter.save();
 
       const time = timeStamp();
       console.log(
-        `${time} Protectora ${newShelter.nombre} registrada correctamente`
+        `${time} Protectora ${newShelter.name} registrada correctamente`
       );
 
       res.status(201).json({
