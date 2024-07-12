@@ -18,6 +18,7 @@ const signup = async (req, res) => {
       NIF,
       age,
     } = req.body;
+    const animals = [];
 
     const newUser = new userModel({
       email,
@@ -29,6 +30,7 @@ const signup = async (req, res) => {
       NIF,
       age,
       animalLimit,
+      animals,
     });
 
     let NIFfacilitado = false;

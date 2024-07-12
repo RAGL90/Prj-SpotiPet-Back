@@ -56,6 +56,11 @@ const userSchema = new Schema({
       "Has alcanzado el límite anual de adopciones por usuario, si requiere de más adopciones contacte con el administrador",
     ],
   },
+  animals: {
+    type: [String],
+    default: [],
+    required: false,
+  },
 });
 
 const userModel = mongoose.model("Users", userSchema, "User");

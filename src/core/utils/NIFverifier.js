@@ -30,7 +30,6 @@ const NIFverifier = (tipoNIF, NIF) => {
   }
 
   if (tipoNIF === "NIE") {
-    console.log("Entra a ruta: tipo NIE");
     const letrasControl = "TRWAGMYFPDXBNJZSQVHLCKE";
 
     // Comprobamos el formato con la expresión regular adecuada
@@ -56,13 +55,10 @@ const NIFverifier = (tipoNIF, NIF) => {
         console.log("Letra inicial de NIE inválida");
         return false;
     }
-    console.log(
-      "El sistema determina que la letra equivale a: " + numeroEquivalente
-    );
+
     // Formamos el número completo y extraemos la letra de control
     let numero = numeroEquivalente + NIF.substring(1, NIF.length - 1);
 
-    console.log(NIF + " equivale a " + numero);
     const letra = NIF.charAt(NIF.length - 1).toUpperCase();
 
     // Calculamos el índice y verificamos la letra de control
@@ -83,8 +79,8 @@ const NIFverifier = (tipoNIF, NIF) => {
     let letra = NIF.charAt(0).toUpperCase();
 
     if (!/^[A-Za-z]\d{8}$/.test(NIF)) {
-      console.log("Formato NIE incorrecto");
-      return false;
+      response.invalidCause = "Formato NIE incorrecto";
+      return response;
     }
     // Si ha pasado el formateador , aceptaremos como válido el CIF
 

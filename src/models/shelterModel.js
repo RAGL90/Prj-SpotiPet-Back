@@ -97,7 +97,7 @@ const shelterSchema = new Schema({
       "La localidad es necesaria para ayudar a los posibles adoptantes a su recogida",
     ],
   },
-  adress: {
+  address: {
     type: String,
     required: [
       true,
@@ -133,6 +133,11 @@ const shelterSchema = new Schema({
     required: [true, "La contraseña es obligatoria, al menos 8 caracteres"],
     trim: true,
     minLength: 8,
+  },
+  animals: {
+    type: [String],
+    default: [],
+    required: false,
   },
   tipoAsociacion: {
     //Lo determina el sistema en función del NIF

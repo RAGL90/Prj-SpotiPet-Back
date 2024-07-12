@@ -13,7 +13,7 @@ const signUpShelter = async (req, res) => {
       name,
       province,
       locality,
-      adress,
+      address,
       phone,
       email,
       pswd,
@@ -22,8 +22,8 @@ const signUpShelter = async (req, res) => {
     } = req.body;
     //Declaramos variables para el sistema
     const tipoAsociacion = "";
-    const uncommon = false;
-    //uncommon => Aquellos registros que no sean asociaciones en su CIF.
+    const uncommon = false; //uncommon =>Registros != asociaciones en su CIF.
+    const animals = []; //En el registro la protectora no tiene animales aún.
 
     const newShelter = new shelterModel({
       tipoNIF,
@@ -31,10 +31,11 @@ const signUpShelter = async (req, res) => {
       name,
       province,
       locality,
-      adress,
+      address,
       phone,
       email,
       pswd: await bcrypt.hash(pswd, 10),
+      animals,
       tipoAsociacion,
       uncommon,
       web,
