@@ -3,9 +3,9 @@ const shelterModel = require("./shelterModel");
 const Schema = mongoose.Schema;
 
 const animalSchema = new Schema({
-  animalType: {
+  specie: {
     type: String,
-    enum: ["Perro", "Gato", "Roedores", "Aves"],
+    enum: ["Perros", "Gatos", "Roedores", "Aves", "Otros"],
     required: true,
   },
   size: {
@@ -20,34 +20,60 @@ const animalSchema = new Schema({
     trim: true,
     require: true,
   },
-  age: {
-    type: String, //String porque se indican "meses" a veces
-    require: true,
+  hairType: {
+    type: String,
+    required: false,
+  },
+  numberID: {
+    type: String,
+    required: false,
+  },
+  breed: {
+    type: String,
+    required: [
+      true,
+      "Es necesario indicar la raza del animal para el formulario, además de proporcionar detalles al posible adoptante",
+    ],
+  },
+  birthDate: {
+    type: Date,
+    //                       Year  month day, hour, minute, second
+    //date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));
+    //date.toLocaleDateString("es-ES")
+    required: [true, "La fecha de nacimiento es necesaria"],
+  },
+  details: {
+    type: String,
+    required: false,
   },
   gender: {
     type: String,
     enum: ["hembra", "macho"],
-    require: true,
+    required: true,
+  },
+  color: {
+    type: String,
+    required: [
+      true,
+      "Es necesario indicar el color principal o colores del animal",
+    ],
   },
   description: {
     type: String,
-    require: false,
+    required: false,
     default: false,
-  },
-  breed: {
-    type: String,
-    require: false,
   },
   photo: {
     type: [String],
-    require: false,
+    required: false,
   },
   urgent: {
     type: Boolean,
     default: false,
-    require: false,
+    required: false,
   },
   owner: {
+    //Será asignado por el controller con el payload de la sesion
     ownerId: {
       type: String,
       required: [true, "No se ha recibido la ID del usuario"],
@@ -58,7 +84,6 @@ const animalSchema = new Schema({
       required: true,
     },
     ownerName: {
-      //Será asignado por el controller
       type: String,
       required: true,
     },

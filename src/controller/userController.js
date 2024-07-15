@@ -3,6 +3,8 @@ const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
 const userModel = require("../models/userModels");
 const bcrypt = require("bcrypt");
+const emailService = require("../core/services/emailService");
+const userRegisterMail = require("../core/services/messages/signedUpUser");
 
 //REGISTRO DE USUARIO
 const signup = async (req, res) => {
@@ -16,8 +18,13 @@ const signup = async (req, res) => {
       animalLimit,
       tipoNIF,
       NIF,
+      province,
+      locality,
+      address,
       age,
+      phone,
     } = req.body;
+
     const animals = [];
 
     const newUser = new userModel({
@@ -28,7 +35,11 @@ const signup = async (req, res) => {
       lastname,
       tipoNIF,
       NIF,
+      province,
+      locality,
+      address,
       age,
+      phone,
       animalLimit,
       animals,
     });
@@ -47,6 +58,15 @@ const signup = async (req, res) => {
         });
       } else {
         await newUser.save();
+
+        //Declaración de parámetros Nodemailer
+        const messageSubject = `¡Gracias por registrarte en Spot My Pet ${newUser.username}! 🐾`;
+        //Como llamamos a una función y estamos en un async DEBEMOS incluir await
+        const message = await userRegisterMail(newUser.username);
+
+        //Envío del mensaje
+        await emailService.sendEmail(newUser.email, messageSubject, message);
+
         const time = timeStamp();
         console.log(
           `${time} Usuario ${newUser.email} registrado correctamente`
@@ -192,6 +212,10 @@ const modifyUser = async (req, res) => {
     user.username = newUserData.username || user.username;
     user.lastname = newUserData.lastname || user.lastname;
     user.age = newUserData.age || user.age;
+    user.province = newUserData.province || user.province;
+    user.locality = newUserData.locality || user.locality;
+    user.address = newUserData.address || user.address;
+    user.phone = newUserData.phone || user.phone;
 
     if (newUserData.userType || newUserData.animalLimit) {
       return res.status(401).json({
