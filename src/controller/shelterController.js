@@ -1,6 +1,7 @@
 const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
 const shelterModel = require("../models/shelterModel");
+const animalModel = require("../models/animalModel");
 
 const bcrypt = require("bcrypt");
 const generateToken = require("../core/auth/middleware/auth");

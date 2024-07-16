@@ -1,8 +1,13 @@
+//IMPORTACIONES:
+//  Modelos de datos
+const userModel = require("../models/userModels");
+const animalModel = require("../models/animalModel");
+//  Utilidades para acciones de usuario
 const generateToken = require("../core/auth/middleware/auth");
 const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
-const userModel = require("../models/userModels");
 const bcrypt = require("bcrypt");
+//  Servicio de Email:
 const emailService = require("../core/services/emailService");
 const userRegisterMail = require("../core/services/messages/signedUpUser");
 
@@ -83,10 +88,20 @@ const signup = async (req, res) => {
     if (NIFfacilitado === false) {
       //El usuario ha preferido no dar su NIF, se procede con el registro
       await newUser.save();
+
+      //Parámetros Nodemailer
+      const messageSubject = `¡Gracias por registrarte en Spot My Pet ${newUser.username}! 🐾`;
+      //Llamamos a la función de la plantilla de email para que se adapte
+      const message = await userRegisterMail(newUser.username);
+      //Envío del mensaje
+      await emailService.sendEmail(newUser.email, messageSubject, message);
+
+      //Creación del log
       const time = timeStamp();
       console.log(
         `${time} Usuario ${newUser.email} registrado correctamente (sin NIF)`
       );
+
       res.status(201).json({
         status: "succeed",
         message: "Usuario creado correctamente",
@@ -184,12 +199,12 @@ const login = async (req, res) => {
 };
 
 // ******* ACCIONES USUARIO LOGUEADO *********
-
 /*
 Contenido del Payload:
  - ID del usuario.
  - Email
- - User Name.
+ - Tipo de usuario
+ - Nombre de usuario.
 */
 
 const modifyUser = async (req, res) => {
