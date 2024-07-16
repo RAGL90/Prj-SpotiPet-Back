@@ -81,14 +81,14 @@ const signUpShelter = async (req, res) => {
 };
 
 //LOGUEO Y VERIFICACION DE PROTECTORAS
-const login = async (req, res) => {
+const shelterLogin = async (req, res) => {
   try {
     const { email, pswd } = req.body;
 
     //Buscamos usuario por mail
     const shelter = await shelterModel.findOne({ email: email });
 
-    if (!user) {
+    if (!shelter) {
       return res.status(401).json({
         error: "email o contraseña incorrecta",
       });
@@ -105,7 +105,7 @@ const login = async (req, res) => {
     //Si entra en esta línea todo correcto => Incrustamos Token con datos del usuario en el payload
     const token = generateToken(
       {
-        shelterId: shelter.id,
+        shelterId: shelter._id,
         email: shelter.email,
         userType: "shelter",
         name: shelter.name,
@@ -115,7 +115,7 @@ const login = async (req, res) => {
 
     const refreshToken = generateToken(
       {
-        shelterId: shelter.id,
+        shelterId: shelter._id,
         email: shelter.email,
         userType: "shelter",
         name: shelter.name,
@@ -126,7 +126,7 @@ const login = async (req, res) => {
     res.status(200).json({
       status: "succeeded",
       data: {
-        id: shelter.id,
+        id: shelter._id,
         email: shelter.email,
         userType: "shelter",
         token,
@@ -142,4 +142,4 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { signUpShelter, login };
+module.exports = { signUpShelter, shelterLogin };
