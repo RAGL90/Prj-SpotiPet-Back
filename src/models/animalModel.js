@@ -18,7 +18,7 @@ const animalSchema = new Schema({
   name: {
     type: String,
     trim: true,
-    require: true,
+    required: true,
   },
   hairType: {
     type: String,
@@ -43,6 +43,7 @@ const animalSchema = new Schema({
     required: [true, "La fecha de nacimiento es necesaria"],
   },
   details: {
+    //REVISAR!!!!!
     type: String,
     required: false,
   },
@@ -59,6 +60,7 @@ const animalSchema = new Schema({
     ],
   },
   description: {
+    //REVISAR!!!!!
     type: String,
     required: false,
     default: false,
