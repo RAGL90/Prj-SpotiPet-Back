@@ -42,8 +42,7 @@ const animalSchema = new Schema({
     //date.toLocaleDateString("es-ES")
     required: [true, "La fecha de nacimiento es necesaria"],
   },
-  details: {
-    //REVISAR!!!!!
+  physicFeatures: {
     type: String,
     required: false,
   },
@@ -60,7 +59,6 @@ const animalSchema = new Schema({
     ],
   },
   description: {
-    //REVISAR!!!!!
     type: String,
     required: false,
     default: false,

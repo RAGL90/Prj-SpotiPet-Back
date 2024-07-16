@@ -146,7 +146,7 @@ const login = async (req, res) => {
     //Si entra en esta línea todo correcto => Incrustamos Token con datos del usuario en el payload
     const token = generateToken(
       {
-        userId: user.id,
+        userId: user._id,
         email: user.email,
         userType: user.userType,
         name: user.name, //Puede no tener name
@@ -156,7 +156,7 @@ const login = async (req, res) => {
 
     const refreshToken = generateToken(
       {
-        userId: user.id,
+        userId: user._id,
         email: user.email,
         userType: user.userType,
         name: user.name, //Puede no tener name
@@ -167,7 +167,7 @@ const login = async (req, res) => {
     res.status(200).json({
       status: "succeeded",
       data: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         userType: user.userType,
         token,
@@ -247,4 +247,37 @@ const modifyUser = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, getUser, modifyUser };
+const deleteUser = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userData = await userModel.findById(userId);
+
+    if (userData) {
+      await userModel.findByIdAndDelete(userId);
+      res.status(200).json({
+        status: "success",
+        message: "Datos de usuario eliminados satisfactoriamente",
+        error: null,
+      });
+      const time = timeStamp();
+      console.log(
+        `${time} usuario ${userData.username} eliminado correctamente`
+      );
+    } else {
+      res.status(404).json({
+        status: "failed",
+        message: "No localizado la usuario",
+        error: "usuario no localizado",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "failed",
+      error: "Error al eliminar usuario",
+      message: error.message,
+    });
+  }
+};
+
+module.exports = { signup, login, getUser, modifyUser, deleteUser };

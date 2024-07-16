@@ -8,10 +8,14 @@ const { verifyToken } = require("../core/auth/middleware/middle");
 const {
   signUpShelter,
   shelterLogin,
+  modifyShelter,
+  deleteShelter,
 } = require("../controller/shelterController");
 
-//Rutas por orden de accion:
 router.post("/signup", signUpShelter);
 router.post("/login", shelterLogin);
+
+router.patch("/panel/:id", verifyToken, modifyShelter);
+router.delete("/panel/:id", verifyToken, deleteShelter);
 
 module.exports = router;
