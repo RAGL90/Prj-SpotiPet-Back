@@ -26,13 +26,11 @@ const sendEmail = async (userEmail, messageSubject, message) => {
     };
     await transporter.sendMail(mailOptions);
     const time = timeStamp();
-    console.log(
-      `${time} Se ha enviado el email de registro a ${userEmail} correctamente`
-    );
+    console.log(`${time} Se ha enviado el email a ${userEmail} correctamente`);
   } catch (error) {
     const time = timeStamp();
     console.log(
-      `${time} No se ha podido enviar el email de bienvenida al usuario ${userEmail} debido a: `,
+      `${time} No se ha podido enviar el email al usuario ${userEmail} debido a: `,
       error
     );
   }

@@ -6,6 +6,10 @@ const animalModel = require("../models/animalModel");
 const bcrypt = require("bcrypt");
 const generateToken = require("../core/auth/middleware/auth");
 
+//Importación email Service:
+const newPetRegister = require("../core/services/messages/newPetRegisterShelter");
+const emailService = require("../core/services/emailService");
+
 //REGISTRO DE PROTECTORA
 const signUpShelter = async (req, res) => {
   try {
@@ -229,4 +233,151 @@ const deleteShelter = async (req, res) => {
   }
 };
 
-module.exports = { signUpShelter, shelterLogin, modifyShelter, deleteShelter };
+// -------------------------------------MANIPULACION DEL MODELO ANIMALES ----------
+
+const createAnimal = async (req, res) => {
+  try {
+    //Variables del animal rellena el creador => req.body
+    //Otra variables se crearán heredadas por el payload
+
+    const {
+      specie,
+      size,
+      name,
+      gender,
+      hairType,
+      numberID,
+      breed,
+      birthDate,
+      physicFeatures,
+      mainColor,
+      description,
+      photo,
+      urgent,
+    } = req.body;
+    //                                  Renombramos name del payload para evitar conflictos con name del animal que se va a crear
+
+    if (!req.user) {
+      res.status(403).json({
+        status: "failed",
+        message:
+          "Es necesario estar registrado y logueado para crear una mascota",
+        error: "Imposible procesar la solicitud",
+      });
+    }
+
+    //Creamos la variable para formatear la fecha en formato UTC y que tenga scope a toda la función
+    let birthDateFormated = null;
+
+    if (birthDate) {
+      //El usuario introduce la fecha en formato ES, ej => 31/12/2024
+      const day = birthDate.substring(0, 2);
+      const month = birthDate.substring(3, 5);
+      const year = birthDate.substring(6);
+
+      //Le restamos 1 al mes porque empieza en 0
+      birthDateFormated = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    }
+
+    //Extraemos datos del creador con el payload
+    const { shelterId, email, userType, name: ownerName } = req.user;
+
+    //Creamos esta variable para el modelo, recien registrado no tiene ningun adoptante
+    const adopter = "";
+
+    //Si el animal es un Perro es NECESARIO indicar el tamaño.
+    if (specie === "Perro" && !size) {
+      console.log(
+        "Se anula registro de animal - Motivo es Perro y no se indica tamaño"
+      );
+      return res.status(412).json({
+        status: "failed",
+        message: "Es necesario indicar un tamaño al crear un perro",
+        error: error.message,
+      });
+    }
+
+    //Finalmente creamos el nuevo animal
+    const newAnimal = new animalModel({
+      specie,
+      size,
+      name,
+      gender,
+      hairType,
+      numberID,
+      breed,
+      birthDate: birthDateFormated,
+      physicFeatures,
+      mainColor,
+      description,
+      photo,
+      urgent,
+      owner: {
+        ownerId: shelterId,
+        ownerType: userType,
+        ownerName,
+      },
+      adopter,
+    });
+
+    //Guardamos nuestra mascota
+    await newAnimal.save();
+
+    //Informamos del cambio en la BBDD
+    const time = timeStamp();
+    console.log(
+      `${time} Nueva mascota: ${newAnimal.name} , tipo ${newAnimal.specie} - Creado correctamente`
+    );
+
+    //Modificamos la ficha de la protectora para que vea en su panel el nuevo animal registrado
+    let shelter = await shelterModel.findById(shelterId);
+    shelter.animals.push(newAnimal._id);
+    await shelter.save();
+
+    //Pasamos respuesta al cliente.
+    res.status(200).json({
+      status: "success",
+      message: `La mascota ${newAnimal.name} está creada correctamente`,
+      error: null,
+    });
+
+    //Llamamos al Mail Service - Situamos el código aquí porque puede ser más lento que la respuesta
+    let icon = "";
+    switch (newAnimal.specie) {
+      case "Perro":
+        icon = "🐶";
+        break;
+      case "Gato":
+        icon = "🐱";
+        break;
+      case "Roedor":
+        icon = "🐹🐰";
+        break;
+      case "Ave":
+        icon = "🦜";
+        break;
+
+      default:
+        icon = "🐾";
+        break;
+    }
+    const messageSubject = `Spot My Pet 🐾 - ¡${newAnimal.name} ${icon} está listo para ser adoptado 👏!`;
+    const message = await newPetRegister(newAnimal.name, newAnimal.specie);
+    await emailService.sendEmail(shelter.email, messageSubject, message);
+    //Finaliza el registro
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido registrar a la mascota",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  signUpShelter,
+  shelterLogin,
+  modifyShelter,
+  deleteShelter,
+  createAnimal,
+};

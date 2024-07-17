@@ -1,19 +1,22 @@
 const mongoose = require("mongoose");
-const shelterModel = require("./shelterModel");
 const Schema = mongoose.Schema;
 
 const animalSchema = new Schema({
+  status: {
+    type: String,
+    enum: ["avaliable", "adopted"],
+    required: true,
+    default: "avaliable",
+  },
   specie: {
     type: String,
-    enum: ["Perros", "Gatos", "Roedores", "Aves", "Otros"],
+    enum: ["Perro", "Gato", "Roedor", "Ave", "Otro"],
     required: true,
   },
   size: {
     type: String,
     enum: ["Grande", "Mediano", "Pequeño"],
-    required: function () {
-      return this.type === "Perro"; //Requerido si se marca Perro
-    },
+    required: false,
   },
   name: {
     type: String,
@@ -39,7 +42,6 @@ const animalSchema = new Schema({
     type: Date,
     //                       Year  month day, hour, minute, second
     //date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));
-    //date.toLocaleDateString("es-ES")
     required: [true, "La fecha de nacimiento es necesaria"],
   },
   physicFeatures: {
@@ -51,7 +53,7 @@ const animalSchema = new Schema({
     enum: ["hembra", "macho"],
     required: true,
   },
-  color: {
+  mainColor: {
     type: String,
     required: [
       true,
@@ -80,13 +82,18 @@ const animalSchema = new Schema({
     },
     ownerType: {
       type: String,
-      enum: ["shelter, user"],
+      enum: ["adopter", "shelter"],
       required: true,
     },
     ownerName: {
       type: String,
       required: true,
     },
+  },
+  adopter: {
+    type: String,
+    default: "",
+    required: false,
   },
 });
 

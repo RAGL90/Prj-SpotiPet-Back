@@ -138,15 +138,27 @@ const userSchema = new Schema({
     default: 0,
     max: [
       3,
-      "Has alcanzado el límite anual de adopciones por usuario, si requiere de más adopciones contacte con el administrador",
+      "Has alcanzado el límite anual de adopciones por usuario, si requiere de más adopciones contacte con administración",
     ],
   },
-  animals: {
-    type: [String],
-    default: [],
-    required: false,
+  animalsCreated: {
+    type: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "animalModel",
+      },
+    ],
+    validate: [
+      CreatedUserLimit,
+      "No puedes aportar más de 3 animales como usuario, si necesitas aportar más contacte con administración",
+    ],
   },
 });
+
+//Función incrustada en modelo para limitar creación de animales - Habrá otra funcion en controller
+function CreatedUserLimit(value) {
+  return value.length <= 3;
+}
 
 const userModel = mongoose.model("Users", userSchema, "User");
 

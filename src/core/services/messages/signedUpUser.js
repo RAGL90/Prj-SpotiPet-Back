@@ -15,7 +15,7 @@ const userRegisterMail = async (username) => {
     <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
             <td align="center" style="background-color: #005187; padding: 20px;">
-                <h1 style="color: #ffffff; font-size: 24px; font-family: 'Caveat', Arial; margin: 0;">¡Bienvenido a SpotMyPet!</h1>
+                <h1 style="color: #ffffff; font-size: 24px; font-family: 'Caveat', Arial; margin: 0;">¡Bienvenido a Spot My Pet!</h1>
             </td>
         </tr>
         <tr>
