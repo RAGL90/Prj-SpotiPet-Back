@@ -344,16 +344,16 @@ const createAnimal = async (req, res) => {
     //Llamamos al Mail Service - Situamos el código aquí porque puede ser más lento que la respuesta
     let icon = "";
     switch (newAnimal.specie) {
-      case "Perro":
+      case "Perros":
         icon = "🐶";
         break;
-      case "Gato":
+      case "Gatos":
         icon = "🐱";
         break;
-      case "Roedor":
+      case "Roedores":
         icon = "🐹🐰";
         break;
-      case "Ave":
+      case "Aves":
         icon = "🦜";
         break;
 

@@ -10,7 +10,7 @@ const animalSchema = new Schema({
   },
   specie: {
     type: String,
-    enum: ["Perro", "Gato", "Roedor", "Ave", "Otro"],
+    enum: ["Perros", "Gatos", "Roedores", "Aves", "Otros"],
     required: true,
   },
   size: {
