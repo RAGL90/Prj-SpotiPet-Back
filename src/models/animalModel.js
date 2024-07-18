@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const animalSchema = new Schema({
+  registerDate: {
+    type: Date,
+    required: false,
+  },
   status: {
     type: String,
     enum: ["avaliable", "adopted"],

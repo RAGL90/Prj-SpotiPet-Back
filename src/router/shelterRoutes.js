@@ -11,11 +11,13 @@ const {
   modifyShelter,
   deleteShelter,
   createAnimal,
+  deleteAnimal,
 } = require("../controller/shelterController");
 
 router.post("/signup", signUpShelter);
 router.post("/login", shelterLogin);
 router.post("/animal", verifyToken, createAnimal);
+router.delete("/animal", verifyToken, deleteAnimal);
 
 router.patch("/panel/:id", verifyToken, modifyShelter);
 router.delete("/panel/:id", verifyToken, deleteShelter);

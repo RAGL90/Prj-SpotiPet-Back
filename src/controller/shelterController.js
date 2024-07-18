@@ -233,8 +233,9 @@ const deleteShelter = async (req, res) => {
   }
 };
 
-// -------------------------------------MANIPULACION DEL MODELO ANIMALES ----------
+// -------------------------------------MANIPULACION DEL MODELO ANIMALES --------------------------------------------------
 
+//-----------> CREAR ANIMAL
 const createAnimal = async (req, res) => {
   try {
     //Variables del animal rellena el creador => req.body
@@ -264,6 +265,7 @@ const createAnimal = async (req, res) => {
           "Es necesario estar registrado y logueado para crear una mascota",
         error: "Imposible procesar la solicitud",
       });
+      return;
     }
 
     //Creamos la variable para formatear la fecha en formato UTC y que tenga scope a toda la función
@@ -293,12 +295,14 @@ const createAnimal = async (req, res) => {
       return res.status(412).json({
         status: "failed",
         message: "Es necesario indicar un tamaño al crear un perro",
-        error: error.message,
+        error: "Tamaño no especificado, es necesario para registrar al perro",
       });
     }
+    const registerDate = new Date();
 
     //Finalmente creamos el nuevo animal
     const newAnimal = new animalModel({
+      registerDate,
       specie,
       size,
       name,
@@ -322,7 +326,6 @@ const createAnimal = async (req, res) => {
 
     //Guardamos nuestra mascota
     await newAnimal.save();
-
     //Informamos del cambio en la BBDD
     const time = timeStamp();
     console.log(
@@ -374,10 +377,75 @@ const createAnimal = async (req, res) => {
   }
 };
 
+//-----------> ELIMINAR ANIMAL
+
+const deleteAnimal = async (req, res) => {
+  try {
+    const { animalId } = req.body;
+    if (!req.user) {
+      res.status(403).json({
+        status: "failed",
+        message: "Es necesario estar registrado y logueado para esta acción",
+        error: "Imposible procesar la solicitud",
+      });
+      return;
+    }
+    // 1º EXTRAEMOS DATOS DEL PAYLOAD.
+    const { shelterId, email, userType, name } = req.user;
+    const animal = await animalModel.findById(animalId);
+    // 2º CONTEMPLAMOS QUE ANIMAL NO EXISTE.
+    if (!animal) {
+      res.status(404).json({
+        status: "failed",
+        message:
+          "Animal no localizado por favor, revise si la ID proporcionada es correcta",
+        error: "Animal no localizado",
+      });
+      return;
+    } else {
+      //3º Comprobamos que el ownerID y el Payload sean el mismo, si no, no se puede realizar esta acción.
+      if (shelterId === animal.owner.ownerId) {
+        //Procedemos al borrado del animal
+        await animalModel.findByIdAndDelete(animalId);
+        //Informamos en consola
+        const time = timeStamp();
+        console.log(
+          `${time} - ${animalId} - ${animalModel.name} eliminado del registro`
+        );
+        //Borrado del animal en el array de la protectora.
+        await shelterModel.findByIdAndUpdate(shelterId, {
+          $pull: { animals: animalId },
+        });
+        //Indicamos respuesta HTTP
+        res.status(202).json({
+          status: "success",
+          message: "Animal eliminado correctamente",
+          error: null,
+        });
+        return;
+      }
+      res.status(404).json({
+        status: "failed",
+        message: "El usuario difiere del propietario del animal",
+        error: "No se pudo borrar el animal",
+      });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido borrar el animal",
+      error: error.message,
+    });
+    return;
+  }
+};
+
 module.exports = {
   signUpShelter,
   shelterLogin,
   modifyShelter,
   deleteShelter,
   createAnimal,
+  deleteAnimal,
 };
