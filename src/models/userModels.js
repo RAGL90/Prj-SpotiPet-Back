@@ -60,6 +60,10 @@ const provincias = [
 ];
 
 const userSchema = new Schema({
+  registerDate: {
+    type: Date,
+    required: false,
+  },
   email: {
     type: String,
     required: [true, "El correo es obligatorio"],
@@ -77,7 +81,7 @@ const userSchema = new Schema({
   userType: {
     type: String,
     require: true,
-    enum: ["adopter", "admin"],
+    enum: ["adopter", "admin", "deletedUser"],
     default: "adopter",
   },
   username: {
@@ -115,11 +119,11 @@ const userSchema = new Schema({
   },
   address: {
     type: String,
-    require: false,
+    required: false,
   },
   age: {
     type: Number,
-    require: false,
+    required: false,
     default: 0,
   },
   phone: {
@@ -142,16 +146,14 @@ const userSchema = new Schema({
     ],
   },
   animalsCreated: {
-    type: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "animalModel",
-      },
-    ],
-    validate: [
-      CreatedUserLimit,
-      "No puedes aportar más de 3 animales como usuario, si necesitas aportar más contacte con administración",
-    ],
+    type: [String],
+    default: [],
+    required: false,
+  },
+  deletedDate: {
+    type: Date,
+    required: false,
+    default: null,
   },
 });
 

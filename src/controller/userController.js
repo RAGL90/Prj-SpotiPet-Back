@@ -10,6 +10,7 @@ const bcrypt = require("bcrypt");
 //  Servicio de Email:
 const emailService = require("../core/services/emailService");
 const userRegisterMail = require("../core/services/messages/signedUpUser");
+const newPetRegisterU = require("../core/services/messages/newPetRegisterUser");
 
 //REGISTRO DE USUARIO
 const signup = async (req, res) => {
@@ -31,8 +32,10 @@ const signup = async (req, res) => {
     } = req.body;
 
     const animals = [];
+    const registerDate = new Date();
 
     const newUser = new userModel({
+      registerDate,
       email,
       pswd: await bcrypt.hash(pswd, 10),
       userType,
@@ -164,7 +167,7 @@ const login = async (req, res) => {
         userId: user._id,
         email: user.email,
         userType: user.userType,
-        name: user.name, //Puede no tener name
+        name: user.username, //Puede no tener name
       },
       false //Es un token de refresco
     );
@@ -174,7 +177,7 @@ const login = async (req, res) => {
         userId: user._id,
         email: user.email,
         userType: user.userType,
-        name: user.name, //Puede no tener name
+        name: user.username, //Puede no tener name
       },
       true //Es un token de refresco
     );
@@ -268,22 +271,50 @@ const deleteUser = async (req, res) => {
     const userData = await userModel.findById(userId);
 
     if (userData) {
-      await userModel.findByIdAndDelete(userId);
-      res.status(200).json({
-        status: "success",
-        message: "Datos de usuario eliminados satisfactoriamente",
-        error: null,
-      });
-      const time = timeStamp();
-      console.log(
-        `${time} usuario ${userData.username} eliminado correctamente`
-      );
+      if (userData.animalLimit != 0) {
+        /* En caso de que haya subido algún animal se guardarán datos mínimos
+        para evitar fraudes o intentos de evitar la medida de control del
+        limite del animal, en RGPD se conoce como interés legítimo
+        Estos datos son el NIF y el email, pasado un tiempo prudente se hará
+        un borrado del usuario.
+        */
+        userData.pswd = "userDeleted-000";
+        userData.username = "Usuario eliminado";
+        userData.lastname = null;
+        userData.age = 0;
+        userData.province = null;
+        userData.locality = null;
+        userData.address = null;
+        userData.phone = null;
+        userData.userType = "deletedUser";
+        userData.deletedDate = new Date();
+        res.status(200).json({
+          status: "success",
+          message: "Datos de usuario eliminados satisfactoriamente",
+          error: null,
+        });
+        return;
+      } else {
+        //En caso de que no haya ningun animal subido, boraremos inmediatamente sus datos:
+        await userModel.findByIdAndDelete(userId);
+        res.status(200).json({
+          status: "success",
+          message: "Datos de usuario eliminados satisfactoriamente",
+          error: null,
+        });
+        const time = timeStamp();
+        console.log(
+          `${time} usuario ${userData.username} eliminado correctamente`
+        );
+        return;
+      }
     } else {
       res.status(404).json({
         status: "failed",
         message: "No localizado la usuario",
         error: "usuario no localizado",
       });
+      return;
     }
   } catch (error) {
     console.error(error);
@@ -295,4 +326,314 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, getUser, modifyUser, deleteUser };
+// -------------------------------------MANIPULACION DEL MODELO ANIMALES --------------------------------------------------
+
+//-----------> CREAR ANIMAL
+const createAnimal = async (req, res) => {
+  try {
+    //Variables del animal rellena el creador => req.body
+    //Otra variables se crearán heredadas por el payload
+    const {
+      specie,
+      size,
+      name,
+      gender,
+      hairType,
+      numberID,
+      breed,
+      birthDate,
+      physicFeatures,
+      mainColor,
+      description,
+      photo,
+      urgent,
+    } = req.body;
+
+    if (!req.user) {
+      res.status(403).json({
+        status: "failed",
+        message:
+          "Es necesario estar registrado y logueado para crear una mascota",
+        error: "Imposible procesar la solicitud",
+      });
+      return;
+    }
+
+    //Creamos la variable para formatear la fecha en formato UTC y que tenga scope a toda la función
+    let birthDateFormated = null;
+
+    if (birthDate) {
+      //El usuario introduce la fecha en formato ES, ej => 31/12/2024
+      const day = birthDate.substring(0, 2);
+      const month = birthDate.substring(3, 5);
+      const year = birthDate.substring(6);
+
+      //Le restamos 1 al mes porque empieza en 0
+      birthDateFormated = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    }
+    // Extraemos datos del creador con el payload
+    // Renombramos name del payload para evitar conflictos con name del animal que se va a crear
+    const { userId, email, userType, name: ownerName } = req.user;
+
+    //Creamos esta variable para el modelo, recien registrado no tiene ningun adoptante
+    const adopter = "";
+
+    //Si el animal es un Perro es NECESARIO indicar el tamaño.
+    if (specie === "Perro" && !size) {
+      console.log(
+        "Se anula registro de animal - Motivo es Perro y no se indica tamaño"
+      );
+      return res.status(412).json({
+        status: "failed",
+        message: "Es necesario indicar un tamaño al crear un perro",
+        error: "Tamaño no especificado, es necesario para registrar al perro",
+      });
+    }
+    const registerDate = new Date();
+
+    //Finalmente creamos el nuevo animal
+    const newAnimal = new animalModel({
+      registerDate,
+      specie,
+      size,
+      name,
+      gender,
+      hairType,
+      numberID,
+      breed,
+      birthDate: birthDateFormated,
+      physicFeatures,
+      mainColor,
+      description,
+      photo,
+      urgent,
+      owner: {
+        ownerId: userId,
+        ownerType: userType,
+        ownerName,
+      },
+      adopter,
+    });
+
+    //Modificamos la ficha de la protectora para que vea en su panel el nuevo animal registrado
+    let user = await userModel.findById(userId);
+    if (user.animalLimit < 3) {
+      //Guardamos nuestra mascota
+      await newAnimal.save();
+
+      user.animalLimit++;
+      user.animalsCreated.push(newAnimal._id);
+
+      await user.save();
+      //Informamos del cambio en la BBDD
+      const time = timeStamp();
+      console.log(
+        `${time} Nueva mascota: ${newAnimal.name} , tipo ${newAnimal.specie} - Creado correctamente`
+      );
+
+      //Pasamos respuesta al cliente.
+      res.status(200).json({
+        status: "success",
+        message: `La mascota ${newAnimal.name} está creada correctamente`,
+        error: null,
+      });
+
+      //Llamamos al Mail Service - Situamos el código aquí porque puede ser más lento que la respuesta
+      let icon = "";
+      switch (newAnimal.specie) {
+        case "Perros":
+          icon = "🐶";
+          break;
+        case "Gatos":
+          icon = "🐱";
+          break;
+        case "Roedores":
+          icon = "🐹🐰";
+          break;
+        case "Aves":
+          icon = "🦜";
+          break;
+
+        default:
+          icon = "🐾";
+          break;
+      }
+      const messageSubject = `Spot My Pet 🐾 - ¡${newAnimal.name} ${icon} está listo para ser adoptado 👏!`;
+      const message = await newPetRegisterU(
+        newAnimal.name,
+        newAnimal.specie,
+        user.animalLimit
+      );
+      await emailService.sendEmail(user.email, messageSubject, message);
+      //Finaliza el registro
+      return;
+    } else {
+      res.status(401).json({
+        status: "failed",
+        message: "No puedes subir más de 3 animales",
+        error: "User animal creation restrincted",
+      });
+      const time = timeStamp();
+      console.log(
+        `${time} El usuario ${user.username} con email: ${user.email} ha superado el límite de subida de animales`
+      );
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido registrar a la mascota",
+      error: error.message,
+    });
+  }
+};
+
+//-----------> ELIMINAR ANIMAL
+const deleteAnimal = async (req, res) => {
+  try {
+    const { animalId } = req.body;
+    if (!req.user) {
+      res.status(403).json({
+        status: "failed",
+        message: "Es necesario estar registrado y logueado para esta acción",
+        error: "Imposible procesar la solicitud",
+      });
+      return;
+    }
+    // 1º EXTRAEMOS DATOS DEL PAYLOAD.
+    const { userId, email, userType, name } = req.user;
+    const animal = await animalModel.findById(animalId);
+    // 2º CONTEMPLAMOS QUE ANIMAL NO EXISTE.
+    if (!animal) {
+      res.status(404).json({
+        status: "failed",
+        message:
+          "Animal no localizado por favor, revise si la ID proporcionada es correcta",
+        error: "Animal no localizado",
+      });
+      return;
+    } else {
+      //3º Comprobamos que el ownerID y el Payload sean el mismo, si no, no se puede realizar esta acción.
+      if (userId === animal.owner.ownerId) {
+        //Procedemos al borrado del animal
+        await animalModel.findByIdAndDelete(animalId);
+        //Informamos en consola
+        const time = timeStamp();
+        console.log(
+          `${time} - ${animalId} - ${animal.name} eliminado del registro`
+        );
+        //Borrado del animal en el array de la protectora.
+        await userModel.findByIdAndUpdate(userId, {
+          $pull: { animalsCreated: animalId },
+        });
+        //Indicamos respuesta HTTP
+        res.status(202).json({
+          status: "success",
+          message: "Animal eliminado correctamente",
+          error: null,
+        });
+        return;
+      }
+      res.status(404).json({
+        status: "failed",
+        message: "El usuario difiere del propietario del animal",
+        error: "No se pudo borrar el animal",
+      });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido borrar el animal",
+      error: error.message,
+    });
+    return;
+  }
+};
+
+// MODIFICAR ANIMAL
+const modifyAnimal = async (req, res) => {
+  try {
+    //1º Observar si hay login:
+    if (!req.user) {
+      res.status(403).json({
+        status: "failed",
+        message: "Es necesario estar registrado y logueado para esta acción",
+        error: "Imposible procesar la solicitud",
+      });
+      return;
+    }
+    //2º Extraemos datos de la solicitud
+    const newAnimalData = req.body;
+    const { userId, email, userType, name } = req.user;
+
+    //3º Observar si no hay datos de ID
+    if (!newAnimalData.id) {
+      res.status(400).json({
+        status: "failed",
+        message: "Id del animal no proporcionado",
+        error: "No se pudo procesar los cambios, ID no proporcionada",
+      });
+      return;
+    }
+    //4º Procesamos búsqueda del animal
+    let animal = await animalModel.findById(newAnimalData.id);
+
+    if (userId === animal.owner.ownerId) {
+      //Analizamos los datos obtenidos
+      animal.status = newAnimalData.status || animal.status;
+      animal.specie = newAnimalData.specie || animal.specie;
+      animal.size = newAnimalData.size || animal.size;
+      animal.name = newAnimalData.name || animal.name;
+      animal.hairType = newAnimalData.hairType || animal.hairType;
+      animal.numberID = newAnimalData.numberID || animal.numberID;
+      animal.breed = newAnimalData.breed || animal.breed;
+      animal.birthDate = newAnimalData.birthDate || animal.birthDate;
+      animal.physicFeatures =
+        newAnimalData.physicFeatures || animal.physicFeatures;
+      animal.gender = newAnimalData.gender || animal.gender;
+      animal.mainColor = newAnimalData.mainColor || animal.mainColor;
+      animal.description = newAnimalData.description || animal.description;
+      animal.urgent = newAnimalData.urgent || animal.urgent;
+
+      await animal.save(); // Guardamos cambios
+      const time = timeStamp();
+      console.log(
+        `${time} - ${animal.id} - Se ha modificado los datos ${animal.name}`
+      );
+
+      res.status(202).json({
+        status: "Success",
+        message: "Se ha modificado los datos correctamente",
+        animal,
+        error: null,
+      });
+      return;
+    } else {
+      res.status(404).json({
+        status: "failed",
+        message: "El usuario difiere del propietario del animal",
+        error: "No se pudo modificar el animal",
+      });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido modificar el animal",
+      error: error.message,
+    });
+    return;
+  }
+};
+
+module.exports = {
+  signup,
+  login,
+  getUser,
+  modifyUser,
+  deleteUser,
+  createAnimal,
+  modifyAnimal,
+  deleteAnimal,
+};

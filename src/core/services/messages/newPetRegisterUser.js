@@ -1,6 +1,6 @@
 const year = new Date().getFullYear();
 
-const newPetRegister = async (petName, petSpecie) => {
+const newPetRegisterU = async (petName, petSpecie, animalLimit) => {
   const emailBody = `
 <html lang="es">
 <head>
@@ -18,24 +18,28 @@ const newPetRegister = async (petName, petSpecie) => {
         <tr>
             <td align="center" style="padding: 20px;">
                 <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
-                    ¡Te agradecemos mucho la confianza depositada en nosotros! Y poder permitirnos encontrarle un hogar con mucho amor a ${petName}!. Para nosotros es un honor colaborar con organizaciones dedicadas al bienestar animal.
+                    ¡Te agradecemos mucho la confianza depositada en nosotros! Y poder permitirnos encontrarle un hogar con mucho amor a ${petName}!
                 </p>
                 <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
-                    Nos tomamos muy enserio nuestro compromiso del bienestar de las mascotas, tratando de que el proceso de adopción sea lo más seguro posible entre usuarios y protectoras.
+                    Recuerda que Spot My Pet es una plataforma enfocada para ayudar las protectoras, no obstante, sabemos que a veces por alguna cuestión encontramos animales que necesitan que les busquemos un hogar.
+                </p>
+                <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
+                    Es por ello, que limitamos nuestro servicio de adopción para los usuarios con dar de alta 3 animales al año.
+                </p>
+                
+                <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
+                   Actualmente tienes ${animalLimit} dado de alta con nosotros.
                 </p>
  
                 <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
-                    ¡Esperamos poder encontrarle una nueva familia a ${petName} muy pronto! Ya puede ser localizado en la categoría ${petSpecie}
+                    ¡Esperamos poder ayudarte a encontrar una nueva familia a ${petName} muy pronto! Ya puedes encontrar a nuestro amigo en la categoría ${petSpecie}
                 </p>
                 <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
-                    Os mantendremos informados de cada solicitante, para que podáis evaluar cada solicitud.
-                </p>
-      
-                <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
-                    Para cualquier duda o información que necesiteis os facilitamos nuestro contacto:
+                    Te mantendremos informado de cada usuario que solicite la adopción de mascota, para que puedas evaluar su solicitud.
                 </p>
                 <p style="font-size: 16px; color: #4d82bc; font-family: 'Caveat', Arial; margin: 0;">
-                    (FUTUROS DATOS DE CONTACTO)
+                    De nuevo agradecemos tu confianza, atentamente:
+                    El equipo de Spot My Pet
                 </p>
             </td>
         </tr>
@@ -58,4 +62,4 @@ const newPetRegister = async (petName, petSpecie) => {
   return emailBody;
 };
 
-module.exports = newPetRegister;
+module.exports = newPetRegisterU;

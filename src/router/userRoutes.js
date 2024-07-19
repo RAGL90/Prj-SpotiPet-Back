@@ -8,11 +8,18 @@ const {
   login,
   modifyUser,
   deleteUser,
+  createAnimal,
+  modifyAnimal,
+  deleteAnimal,
 } = require("../controller/userController");
 
-router.get("/", getUser); // OK!
-router.post("/signup", signup); // OK! /user/signup.
-router.post("/login", login); //OK! /user/login.
+router.get("/", getUser);
+router.post("/signup", signup);
+router.post("/login", login);
+
+router.post("/animal", verifyToken, createAnimal);
+router.patch("/animal", verifyToken, modifyAnimal);
+router.delete("/animal", verifyToken, deleteAnimal);
 
 router.patch("/user-panel", verifyToken, modifyUser);
 router.delete("/user-panel", verifyToken, deleteUser);
