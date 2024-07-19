@@ -378,7 +378,6 @@ const createAnimal = async (req, res) => {
 };
 
 //-----------> ELIMINAR ANIMAL
-
 const deleteAnimal = async (req, res) => {
   try {
     const { animalId } = req.body;
@@ -441,6 +440,83 @@ const deleteAnimal = async (req, res) => {
   }
 };
 
+// MODIFICAR ANIMAL
+const modifyAnimal = async (req, res) => {
+  try {
+    //1º Observar si hay login:
+    if (!req.user) {
+      res.status(403).json({
+        status: "failed",
+        message: "Es necesario estar registrado y logueado para esta acción",
+        error: "Imposible procesar la solicitud",
+      });
+      return;
+    }
+    //2º Extraemos datos de la solicitud
+    const newAnimalData = req.body;
+    const { shelterId, email, userType, name } = req.user;
+
+    //3º Observar si no hay datos de ID
+    if (!newAnimalData.id) {
+      res.status(400).json({
+        status: "failed",
+        message: "Id del animal no proporcionado",
+        error: "No se pudo procesar los cambios, ID no proporcionada",
+      });
+      return;
+    }
+    //4º Procesamos búsqueda del animal
+    let animal = await animalModel.findById(newAnimalData.id);
+    console.log("Datos del shelter:" + shelterId);
+    console.log("Datos del ownerAnimal:" + animal.owner.ownerId);
+    if (shelterId === animal.owner.ownerId) {
+      //Analizamos los datos obtenidos
+      animal.status = newAnimalData.status || animal.status;
+      animal.specie = newAnimalData.specie || animal.specie;
+      animal.size = newAnimalData.size || animal.size;
+      animal.name = newAnimalData.name || animal.name;
+      animal.hairType = newAnimalData.hairType || animal.hairType;
+      animal.numberID = newAnimalData.numberID || animal.numberID;
+      animal.breed = newAnimalData.breed || animal.breed;
+      animal.birthDate = newAnimalData.birthDate || animal.birthDate;
+      animal.physicFeatures =
+        newAnimalData.physicFeatures || animal.physicFeatures;
+      animal.gender = newAnimalData.gender || animal.gender;
+      animal.mainColor = newAnimalData.mainColor || animal.mainColor;
+      animal.description = newAnimalData.description || animal.description;
+      animal.urgent = newAnimalData.urgent || animal.urgent;
+
+      await animal.save(); // Guardamos cambios
+      const time = timeStamp();
+      console.log(
+        `${time} - ${animal.id} - Se ha modificado los datos ${animal.name}`
+      );
+
+      res.status(202).json({
+        status: "Success",
+        message: "Se ha modificado los datos correctamente",
+        animal,
+        error: null,
+      });
+      return;
+    } else {
+      res.status(404).json({
+        status: "failed",
+        message: "El usuario difiere del propietario del animal",
+        error: "No se pudo modificar el animal",
+      });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido borrar el animal",
+      error: error.message,
+    });
+    return;
+  }
+};
+
 module.exports = {
   signUpShelter,
   shelterLogin,
@@ -448,4 +524,5 @@ module.exports = {
   deleteShelter,
   createAnimal,
   deleteAnimal,
+  modifyAnimal,
 };
