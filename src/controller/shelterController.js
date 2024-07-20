@@ -255,6 +255,7 @@ const createAnimal = async (req, res) => {
       description,
       photo,
       urgent,
+      cost,
     } = req.body;
     //                                  Renombramos name del payload para evitar conflictos con name del animal que se va a crear
 
@@ -314,6 +315,7 @@ const createAnimal = async (req, res) => {
       physicFeatures,
       mainColor,
       description,
+      cost,
       photo,
       urgent,
       owner: {

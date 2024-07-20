@@ -4,7 +4,8 @@ const Schema = mongoose.Schema;
 const animalSchema = new Schema({
   registerDate: {
     type: Date,
-    required: false,
+    required: false, //Aunque sea False, el controller lo va a añadir automáticamente.
+    index: true,
   },
   status: {
     type: String,
@@ -16,11 +17,13 @@ const animalSchema = new Schema({
     type: String,
     enum: ["Perros", "Gatos", "Roedores", "Aves", "Otros"],
     required: true,
+    index: true, //Para consultas sobre tipo de animal
   },
   size: {
     type: String,
     enum: ["Grande", "Mediano", "Pequeño"],
     required: false,
+    index: true, //Para consultas que necesiten un filtrar el tamaño del perro
   },
   name: {
     type: String,
@@ -41,6 +44,7 @@ const animalSchema = new Schema({
       true,
       "Es necesario indicar la raza del animal para el formulario, además de proporcionar detalles al posible adoptante",
     ],
+    index: true,
   },
   birthDate: {
     type: Date,
@@ -69,6 +73,11 @@ const animalSchema = new Schema({
     required: false,
     default: false,
   },
+  cost: {
+    type: Number,
+    required: false,
+    default: 0,
+  },
   photo: {
     type: [String],
     required: false,
@@ -77,6 +86,7 @@ const animalSchema = new Schema({
     type: Boolean,
     default: false,
     required: false,
+    index: true,
   },
   owner: {
     //Será asignado por el controller con el payload de la sesion
@@ -100,6 +110,9 @@ const animalSchema = new Schema({
     required: false,
   },
 });
+
+// Índice compuesto para ordenar por urgent y registerDate (El de consulta principal al llegar a la web)
+animalSchema.index({ urgent: -1, registerDate: -1 });
 
 const animalModel = mongoose.model("Animals", animalSchema, "Animals");
 

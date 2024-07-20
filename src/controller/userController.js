@@ -346,7 +346,7 @@ const createAnimal = async (req, res) => {
       mainColor,
       description,
       photo,
-      urgent,
+      //Los usuarios no podrán indicar costes, ni urgencia estos dos parámetros son exclusivos para Protectoras
     } = req.body;
 
     if (!req.user) {
@@ -515,25 +515,53 @@ const deleteAnimal = async (req, res) => {
     } else {
       //3º Comprobamos que el ownerID y el Payload sean el mismo, si no, no se puede realizar esta acción.
       if (userId === animal.owner.ownerId) {
-        //Procedemos al borrado del animal
-        await animalModel.findByIdAndDelete(animalId);
-        //Informamos en consola
-        const time = timeStamp();
-        console.log(
-          `${time} - ${animalId} - ${animal.name} eliminado del registro`
-        );
-        //Borrado del animal en el array de la protectora.
-        await userModel.findByIdAndUpdate(userId, {
-          $pull: { animalsCreated: animalId },
-        });
-        //Indicamos respuesta HTTP
-        res.status(202).json({
-          status: "success",
-          message: "Animal eliminado correctamente",
-          error: null,
-        });
-        return;
+        //Revisamos si el animal ha sido adoptado:
+        if (!animal.adopter) {
+          //Si no hay adoptante, el usuario lo ha borrado por otros motivos, procedemos al borrado del animal
+          await animalModel.findByIdAndDelete(animalId);
+          //Informamos en consola
+          const time = timeStamp();
+          console.log(
+            `${time} - ${animalId} - ${animal.name} eliminado del registro`
+          );
+          //Borrado del animal en el array del usuario.
+          //Actualización del límite del animal
+          await userModel.findByIdAndUpdate(userId, {
+            $inc: { animalLimit: -1 },
+            $pull: { animalsCreated: animalId },
+            //                                   https://www.mongodb.com/docs/manual/reference/operator/update/inc/
+            //                                   https://www.mongodb.com/docs/manual/reference/operator/update/pull/
+          });
+
+          //Indicamos respuesta HTTP
+          res.status(202).json({
+            status: "success",
+            message: "Animal eliminado correctamente",
+            error: null,
+          });
+          return;
+        } else {
+          //En este caso si había adoptante para este animal, lo borramos pero NO se reduce el animalLimit
+          await animalModel.findByIdAndDelete(animalId);
+          //Informamos en consola
+          const time = timeStamp();
+          console.log(
+            `${time} - ${user.email} elimina el registro del animal: ${animalId} - SIN actualizacion de límite`
+          );
+          //Borrado del animal en el array del usuario. Sin reducir el límite de adopciones.
+          await userModel.findByIdAndUpdate(userId, {
+            $pull: { animalsCreated: animalId },
+          });
+          //Indicamos respuesta HTTP
+          res.status(202).json({
+            status: "success",
+            message: "Animal eliminado correctamente",
+            error: null,
+          });
+          return;
+        }
       }
+      //En este lado, las ID del propietario y del Payload que intenta hacer la accion son diferentes.
       res.status(404).json({
         status: "failed",
         message: "El usuario difiere del propietario del animal",
@@ -624,6 +652,52 @@ const modifyAnimal = async (req, res) => {
       error: error.message,
     });
     return;
+  }
+};
+
+//LECTURA DEL ANIMAL - ESTA SERÁ LA CONSULTA DE LOS ANIMALES Y NO REQUIERE DE REGISTRO DE USUARIO:
+const getAnimals = async (req, res) => {
+  let { page, limit } = req.query;
+  //Necesitamos operar con números por lo que convertimos String => Numbers
+  page = parseInt(page) || 1; // Si no se indica, default: 1
+  limit = parseInt(limit) || 20; // default: 20
+  limit = limit > 50 ? 50 : limit; //Ternario para no hacer una consulta enorme en el endpoint
+
+  try {
+    const animals = animalModel
+      .sort({ urgent: -1, registerDate: -1 })
+      .find()
+      .skip((page - 1) * limit)
+      .limit(limit);
+    /*
+      .sort({ urgent: -1, registerDate: -1 })
+      Con "-1", Mongo organiza de forma descendente, aquellos que sean urgentes se mostrarán primero, y luego el criterio será
+      la fecha de registro.
+
+      .skip((page - 1) * limit)
+      Omitimos una cantidad de datos/animales en la consulta, este salto varía en función de la página y el limite dado
+      Ej: Página 2, con límite 20 datos => 2(Página) - 1 x 20(Limite) = 1 x 20 = 20 => comenzará la consulta en el resultado 21
+      
+      .limit(limit);
+      Delimitación de la consulta, se indican cuantos datos o animales se van a ver por consultas, indicado por la petición.
+      */
+
+    //ANTES DE DAR LA RESPUESTA, Mongo debe conocer el tamaño de los documentos:
+    const total = await animalModel.countDocuments();
+
+    res.json({
+      data: animals,
+      total,
+      page,
+      pages: Math.ceil(total / limit), // Ceil redondea al entero igual o superior, obtenemos las páginas dividiendo:
+      //                              Total de documentos / Limite de la consulta
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido realizar la carga de animales",
+      error: error.message,
+    });
   }
 };
 
