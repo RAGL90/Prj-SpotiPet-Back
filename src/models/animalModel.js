@@ -104,9 +104,9 @@ const animalSchema = new Schema({
       required: true,
     },
   },
-  adopter: {
-    type: String,
-    default: "",
+  adopted: {
+    type: Boolean,
+    default: false,
     required: false,
   },
 });

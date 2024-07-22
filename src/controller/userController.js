@@ -350,7 +350,7 @@ const createAnimal = async (req, res) => {
     } = req.body;
 
     //Creamos esta variable para el modelo, recien registrado no tiene ningun adoptante
-    const adopter = "";
+    const adopted = false;
     //Los usuarios siempre serán con urgent en modo false.
     const urgent = false;
 
@@ -411,7 +411,7 @@ const createAnimal = async (req, res) => {
         ownerType: userType,
         ownerName,
       },
-      adopter,
+      adopted,
     });
 
     //Modificamos la ficha de la protectora para que vea en su panel el nuevo animal registrado
@@ -515,7 +515,7 @@ const deleteAnimal = async (req, res) => {
       //3º Comprobamos que el ownerID y el Payload sean el mismo, si no, no se puede realizar esta acción.
       if (userId === animal.owner.ownerId) {
         //Revisamos si el animal ha sido adoptado:
-        if (!animal.adopter) {
+        if (!animal.adopted) {
           //Si no hay adoptante, el usuario lo ha borrado por otros motivos, procedemos al borrado del animal
           await animalModel.findByIdAndDelete(animalId);
           //Informamos en consola

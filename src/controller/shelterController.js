@@ -286,7 +286,7 @@ const createAnimal = async (req, res) => {
     const { shelterId, email, userType, name: ownerName } = req.user;
 
     //Creamos esta variable para el modelo, recien registrado no tiene ningun adoptante
-    const adopter = "";
+    const adopted = false;
 
     //Si el animal es un Perro es NECESARIO indicar el tamaño.
     if (specie === "Perros" && !size) {
@@ -323,7 +323,7 @@ const createAnimal = async (req, res) => {
         ownerType: userType,
         ownerName,
       },
-      adopter,
+      adopted,
     });
 
     //Guardamos nuestra mascota
