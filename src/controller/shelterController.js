@@ -289,7 +289,7 @@ const createAnimal = async (req, res) => {
     const adopter = "";
 
     //Si el animal es un Perro es NECESARIO indicar el tamaño.
-    if (specie === "Perro" && !size) {
+    if (specie === "Perros" && !size) {
       console.log(
         "Se anula registro de animal - Motivo es Perro y no se indica tamaño"
       );

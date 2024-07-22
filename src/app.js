@@ -12,6 +12,7 @@ const PORT = 9000;
 //AREA ROUTERS
 const userRouter = require("./router/userRoutes");
 const shelterRouter = require("./router/shelterRoutes");
+const animalRouter = require("./router/animalRouter");
 
 //AREA SWAGGER
 
@@ -49,6 +50,8 @@ db.on("disconnected", () => {
 app.use("/user", userRouter);
 
 app.use("/shelter", shelterRouter);
+
+app.use("/", animalRouter);
 
 //SWAGGER
 
