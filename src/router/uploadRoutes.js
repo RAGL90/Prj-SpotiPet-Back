@@ -40,30 +40,44 @@ const storage = multer.diskStorage({
   },
 });
 
+//Creamos la funcion de multer con carga y tipo de carga (simple o múltimple)
+//En el paréntesis indicamos el nombre que debe indicar la solicitud en este caso "image" será el nombre aceptado en el envío de archivos.
 const upload = multer({ storage }).single("image");
 
 router.post("/:animalId", verifyToken, async (req, res, next) => {
+  //Indicamos en URL el ID del animal
   try {
-    const animalId = req.params.animalId;
+    const animalId = req.params.animalId; //Conservamos ese ID que nos será util para validaciones
     if (!animalId) {
-      res.status(400).json({
+      //1ª Validacion - No se ha indicado ningun ID => RECHAZAMOS
+      return res.status(400).json({
         status: "failed",
         message: "Se requiere de un Id de animal para subir el archivo",
         error: "Not ID Found",
       });
     }
-
+    //2ª Validacion - Se ha indicado un ID => BUSCAMOS
     let animal = await animalModel.findById(animalId);
+    if (!animal) {
+      //2.1 - No se localiza
+      return res.status(400).json({
+        status: "failed",
+        message: "El Id del animal indicado no existe",
+        error: "Not ID Found",
+      });
+    }
+    //2.2 - Se localiza el animal => 3º Extraemos datos del Payload
     const { shelterId, userId, email, userType, name: ownerName } = req.user;
 
+    //3.1 - No se obtienen identificadores de Usuario => Rechazamos la peticion con un Forbiden
     if (!shelterId && !userId) {
-      //No disponemos de ningun registro del solicitante
-      res.status(403).json({
+      return res.status(403).json({
         status: "Forbiden",
         message: "Es necesario estar logueado para esta acción",
         error: "Ingrese sesion e intentelo de nuevo",
       });
     }
+    //3.2 - Se obtiene Identificador
     if (userId === animal.owner.ownerId || shelterId === animal.owner.ownerId) {
       upload(req, res, async function (err) {
         if (err) {
