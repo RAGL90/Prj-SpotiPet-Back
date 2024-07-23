@@ -5,6 +5,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const path = require("path");
 
 const mongoose = require("mongoose");
 const PORT = 9000;
@@ -12,7 +13,8 @@ const PORT = 9000;
 //AREA ROUTERS
 const userRouter = require("./router/userRoutes");
 const shelterRouter = require("./router/shelterRoutes");
-const animalRouter = require("./router/animalRouter");
+const animalRouter = require("./router/animalRoutes");
+const uploadRoutes = require("./router/uploadRoutes");
 
 //AREA SWAGGER
 
@@ -53,12 +55,17 @@ app.use("/shelter", shelterRouter);
 
 app.use("/", animalRouter);
 
+app.use("/upload", uploadRoutes);
+
 //SWAGGER
 
 //NECESARIOS
 app.use((req, res, next) => {
   res.status(404).send("Sorry, that path doesn't exist");
 });
+
+//Carpeta que será accesible desde el exterior
+app.use(express.static(path.join(__dirname, "public/animals")));
 
 app.listen(PORT, () => {
   console.log(`Server ready and running at: http://localhost/${PORT}`);
