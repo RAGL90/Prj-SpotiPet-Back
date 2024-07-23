@@ -77,23 +77,30 @@ router.post("/:animalId", verifyToken, async (req, res, next) => {
         error: "Ingrese sesion e intentelo de nuevo",
       });
     }
-    //3.2 - Se obtiene Identificador
+    //3.2 - Se obtiene Identificador => 4ª Validación
+
+    //4.1 - La peticion pertenece al propietario => OK, pasamos a multer
     if (userId === animal.owner.ownerId || shelterId === animal.owner.ownerId) {
+      //Llamamos a multer, enviandole req, y una funcion asíncrona para captar el error
       upload(req, res, async function (err) {
         if (err) {
+          //Contemplamos problemas durante la carga
           return res.status(500).json({
             status: "failed",
             message: "Error al cargar el archivo",
             error: err.message,
           });
         }
-
+        //Se ha subido la imagen correctamente => Indicamos el filename en el array de la BBDD
         animal.photo.push(req.file.filename);
+        //Esperamos guardado (para esto indicamos async)
         await animal.save();
 
+        //Informamos de los cambios a consola
         const time = timeStamp();
         console.log(`${time} - ${animalId} - Foto cargada correctamente`);
 
+        //Informamos al cliente
         return res.status(200).json({
           status: "File Loaded",
           message: "Archivo subido con éxito",
@@ -101,6 +108,7 @@ router.post("/:animalId", verifyToken, async (req, res, next) => {
         });
       });
     } else {
+      //4.2 - La peticion pertenece a un usuario que NO ES propietario del animal => Forbidden
       return res.status(403).json({
         status: "Forbiden",
         message: "No autorizado para subir archivos para este animal",
@@ -108,6 +116,7 @@ router.post("/:animalId", verifyToken, async (req, res, next) => {
       });
     }
   } catch (error) {
+    //Errores no controlados
     res.status(500).json({
       status: "failed",
       message: "Failed loading files",
