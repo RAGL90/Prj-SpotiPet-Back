@@ -4,7 +4,7 @@ const shelterModel = require("../models/shelterModel");
 const animalModel = require("../models/animalModel");
 
 const bcrypt = require("bcrypt");
-const generateToken = require("../core/auth/middleware/auth");
+const generateToken = require("../core/middleware/auth/auth");
 
 //Importación email Service:
 const newPetRegister = require("../core/services/messages/newPetRegisterShelter");
@@ -236,7 +236,7 @@ const deleteShelter = async (req, res) => {
 // -------------------------------------MANIPULACION DEL MODELO ANIMALES --------------------------------------------------
 
 //-----------> CREAR ANIMAL
-const createAnimal = async (req, res) => {
+const createAnimal = async (req, res, next) => {
   try {
     //Variables del animal rellena el creador => req.body
     //Otra variables se crearán heredadas por el payload
@@ -254,8 +254,8 @@ const createAnimal = async (req, res) => {
       mainColor,
       description,
       photo,
-      urgent,
       cost,
+      urgent,
     } = req.body;
     //                                  Renombramos name del payload para evitar conflictos con name del animal que se va a crear
 
@@ -282,10 +282,10 @@ const createAnimal = async (req, res) => {
       birthDateFormated = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
     }
 
-    //Extraemos datos del creador con el payload
+    //Extraemos datos del creador del animal con el payload
     const { shelterId, email, userType, name: ownerName } = req.user;
 
-    //Creamos esta variable para el modelo, recien registrado no tiene ningun adoptante
+    //Creamos esta variable por necesidad del modelo de datos, recien registrado no tiene ningun adoptante
     const adopted = false;
 
     //Si el animal es un Perro es NECESARIO indicar el tamaño.
@@ -299,8 +299,8 @@ const createAnimal = async (req, res) => {
         error: "Tamaño no especificado, es necesario para registrar al perro",
       });
     }
-    const registerDate = new Date();
 
+    const registerDate = new Date();
     //Finalmente creamos el nuevo animal
     const newAnimal = new animalModel({
       registerDate,
@@ -339,7 +339,7 @@ const createAnimal = async (req, res) => {
     shelter.animals.push(newAnimal._id);
     await shelter.save();
 
-    //Pasamos respuesta al cliente.
+    //No hay fotos => pasamos respuesta al cliente.
     res.status(200).json({
       status: "success",
       message: `La mascota ${newAnimal.name} está creada correctamente`,
@@ -366,9 +366,9 @@ const createAnimal = async (req, res) => {
         icon = "🐾";
         break;
     }
-    const messageSubject = `Spot My Pet 🐾 - ¡${newAnimal.name} ${icon} está listo para ser adoptado 👏!`;
-    const message = await newPetRegister(newAnimal.name, newAnimal.specie);
-    await emailService.sendEmail(shelter.email, messageSubject, message);
+    // const messageSubject = `Spot My Pet 🐾 - ¡${newAnimal.name} ${icon} está listo para ser adoptado 👏!`;
+    // const message = await newPetRegister(newAnimal.name, newAnimal.specie);
+    // await emailService.sendEmail(shelter.email, messageSubject, message);
     //Finaliza el registro
   } catch (error) {
     res.status(500).json({

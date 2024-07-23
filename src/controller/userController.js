@@ -3,7 +3,7 @@
 const userModel = require("../models/userModels");
 const animalModel = require("../models/animalModel");
 //  Utilidades para acciones de usuario
-const generateToken = require("../core/auth/middleware/auth");
+const generateToken = require("../core/middleware/auth/auth");
 const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
 const bcrypt = require("bcrypt");

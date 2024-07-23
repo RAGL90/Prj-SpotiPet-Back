@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 //Carga del Middleware
-const { verifyToken } = require("../core/auth/middleware/middle");
+const { verifyToken } = require("../core/middleware/auth/middle");
+const upload = require("../core/middleware/upload");
 
 //Controllers
 const {
@@ -17,7 +18,11 @@ const {
 
 router.post("/signup", signUpShelter);
 router.post("/login", shelterLogin);
+
+//Subida de imágenes del animal tras verificar el token => Procedemos a la aceptación de subida de fotos en array y creamos el animal
+
 router.post("/animal", verifyToken, createAnimal);
+
 router.delete("/animal", verifyToken, deleteAnimal);
 router.patch("/animal", verifyToken, modifyAnimal);
 
