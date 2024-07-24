@@ -18,33 +18,84 @@ const animalModel = require("../models/animalModel");
 //Carga de utilidad para consola
 const timeStamp = require("../core/utils/timeStamp");
 
-// Usamos una PRE CONFIGURACION de Multer
+// Usamos un objeto con CONFIGURACION de Multer - El destino cambia según el req.params       ******** CONFIG
 const storage = multer.diskStorage({
   //Guardamos en disco (No en memoria)
   destination: function (req, file, cb) {
-    const animalId = req.params.animalId; //Obtenemos el animalId por el usuario
+    const animalId = req.params.animalId;
+    //Obtenemos el animalId por la url que indica el cliente/usuario
     const uploadPath = path.join(
       __dirname,
-      `../public/animals/uploads/${animalId}` //Indicamos lugar dónde queremos que se creen las imágenes
+      `../public/animals/uploads/${animalId}`
+      //Indicamos lugar dónde queremos que se creen las imágenes
     );
 
     if (!fs.existsSync(uploadPath)) {
       //En caso de que no exista la carpeta => Usamos File System para crearla
-      fs.mkdirSync(uploadPath, { recursive: true }); //Recursive activado es para crear carpetas que no existan
+      fs.mkdirSync(uploadPath, { recursive: true });
+      //Recursive activado es para crear carpetas que no existan
     }
-
-    cb(null, uploadPath); //Si CallBack está null, pasamos la ruta de carga de archivos
+    //Si CallBack está null, pasamos la ruta de carga de archivos
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname); //Si callback está null, mantenemos los nombres de archivos originales
+    cb(null, file.originalname);
+    //Si callback está null, mantenemos los nombres de archivos originales
   },
 });
 
-//Creamos la funcion de multer con carga y tipo de carga (simple o múltimple)
-//En el paréntesis indicamos el nombre que debe indicar la solicitud en este caso "image" será el nombre aceptado en el envío de archivos.
-const upload = multer({ storage }).single("image");
+//Creamos la FUNCION de multer usando la configuracion de Storage.
+//En el parámetro final tipo de carga (.simple o  múltiple)
+//En el paréntesis del tipo de carga indicamos el nombre ha de tener LA SOLICITUD, en este caso "image".
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 6 * 1000 * 1000, //6MB como limite de peso - el valor se indica en Bytes
+  },
+  fileFilter: (req, file, cb) => {
+    const fileAccepted = /jpeg|jpg|png|gif|tif|svg|webp/;
+    const mimetype = fileAccepted.test(file.mimetype); // Es un test (true o false) MimeType indica la extension del archivo, ej: mimetype: "image/jpeg"
+    /*
+    La biblioteca Path tiene incorporada funciones utiles:
+    - extname -> extrae la extensión del archivo, si indicamos file.originalname lo extrae del nombre original del cliente
+    */
+    const extname = fileAccepted.test(path.extname(file.originalname));
+    if (mimetype && extname) {
+      //Si ambos son true se verifica que el archivo es una imagen y pasamos un callback limpio para que proceda
+      return cb(null, true);
+    }
 
-router.post("/:animalId", verifyToken, async (req, res, next) => {
+    cb("Error: El archivo no es un formato de imagen válido");
+  },
+}).single("image");
+
+//WRAPPER para capturar errores de Multer:
+function uploadMiddleware(req, res, next) {
+  upload(req, res, function (error) {
+    if (error) {
+      // Si Multer en su biblioteca genera un error, se procede a enviar el error.
+      if (error instanceof multer.MulterError) {
+        // Errores específicos de Multer (ej: 'file too large')
+        return res.status(500).json({
+          status: "failed",
+          message: "Error al cargar el archivo",
+          error: error.message,
+        });
+      } else {
+        // Si el error es por nuestra configuracion con mensaje personalizados como fileFilter enviamos el error al cliente.
+        return res.status(400).json({
+          status: "failed",
+          message: "Error al cargar el archivo",
+          error: error,
+        });
+      }
+    }
+    // Si no hay errores, continua con el siguiente middleware
+    next();
+  });
+}
+
+router.post("/:animalId", verifyToken, async (req, res) => {
   //Indicamos en URL el ID del animal
   try {
     const animalId = req.params.animalId; //Conservamos ese ID que nos será util para validaciones
@@ -81,26 +132,15 @@ router.post("/:animalId", verifyToken, async (req, res, next) => {
 
     //4.1 - La peticion pertenece al propietario => OK, pasamos a multer
     if (userId === animal.owner.ownerId || shelterId === animal.owner.ownerId) {
-      //Llamamos a multer, enviandole req, y una funcion asíncrona para captar el error
-      upload(req, res, async function (err) {
-        if (err) {
-          //Contemplamos problemas durante la carga
-          return res.status(500).json({
-            status: "failed",
-            message: "Error al cargar el archivo",
-            error: err.message,
-          });
-        }
-        //Se ha subido la imagen correctamente => Indicamos el filename en el array de la BBDD
+      // Usamos el nuevo middleware de carga
+      uploadMiddleware(req, res, async function () {
+        // Aquí colocamos el código que se ejecuta después de que el archivo se haya cargado exitosamente
         animal.photo.push(req.file.filename);
-        //Esperamos guardado (para esto indicamos async)
         await animal.save();
 
-        //Informamos de los cambios a consola
         const time = timeStamp();
         console.log(`${time} - ${animalId} - Foto cargada correctamente`);
 
-        //Informamos al cliente
         return res.status(200).json({
           status: "File Loaded",
           message: "Archivo subido con éxito",

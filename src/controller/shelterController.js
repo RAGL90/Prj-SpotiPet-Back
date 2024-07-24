@@ -366,9 +366,9 @@ const createAnimal = async (req, res, next) => {
         icon = "🐾";
         break;
     }
-    // const messageSubject = `Spot My Pet 🐾 - ¡${newAnimal.name} ${icon} está listo para ser adoptado 👏!`;
-    // const message = await newPetRegister(newAnimal.name, newAnimal.specie);
-    // await emailService.sendEmail(shelter.email, messageSubject, message);
+    const messageSubject = `Spot My Pet 🐾 - ¡${newAnimal.name} ${icon} está listo para ser adoptado 👏!`;
+    const message = await newPetRegister(newAnimal.name, newAnimal.specie);
+    await emailService.sendEmail(shelter.email, messageSubject, message);
     //Finaliza el registro
   } catch (error) {
     res.status(500).json({
@@ -517,42 +517,6 @@ const modifyAnimal = async (req, res) => {
     });
     return;
   }
-};
-
-//PhotoLoader - Esta seccion necesita verificacion del usuario:
-const photoLoader = async (req, res) => {
-  try {
-    //1º Observar si hay login:
-    if (!req.user) {
-      res.status(403).json({
-        status: "failed",
-        message: "Es necesario estar registrado y logueado para esta acción",
-        error: "Imposible procesar la solicitud",
-      });
-      return;
-    }
-    //2. Hay validacion de usuario se obtiene datos del usuario
-    const { shelterId, email, userType, name } = req.user;
-
-    //3. La id viene proporcionada en la url
-    const { id } = req.params;
-
-    //4. Hacemos carga del animal
-    let animal = await animalModel.findById(id);
-
-    //5. El animal indicado no existe
-    if (!animal) {
-      return res.staturs(404).json({
-        message: "Animal no localizado",
-      });
-    }
-
-    //6. Verificamos que el animal pertenece a la protecta
-    if (shelterId === animal.owner.ownerId) {
-      //Se procede con la carga de imágenes
-    }
-    const photoNames = req.files.map((file) => file.filename);
-  } catch (error) {}
 };
 
 module.exports = {

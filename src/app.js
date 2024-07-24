@@ -57,15 +57,16 @@ app.use("/", animalRouter);
 
 app.use("/upload", uploadRoutes);
 
+//STATIC FILES => Carpeta que será accesible desde el exterior de forma que el front lo recoja
+app.use(express.static(path.join(__dirname, "public/animals/uploads/")));
+//Ej de URL: http://localhost:9000/669f825ba35172da52428823/669f825ba35172da52428823.jpg
+
 //SWAGGER
 
 //NECESARIOS
 app.use((req, res, next) => {
   res.status(404).send("Sorry, that path doesn't exist");
 });
-
-//Carpeta que será accesible desde el exterior
-app.use(express.static(path.join(__dirname, "public/animals")));
 
 app.listen(PORT, () => {
   console.log(`Server ready and running at: http://localhost/${PORT}`);
