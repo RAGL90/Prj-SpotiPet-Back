@@ -19,7 +19,7 @@ const animalModel = require("../models/animalModel");
 
 //Carga de utilidad para consola
 const timeStamp = require("../core/utils/timeStamp");
-const { version } = require("os");
+// const { version } = require("os");
 
 // Usamos un objeto con CONFIGURACION de Multer - El destino cambia según el req.params       ******** CONFIG
 const storage = multer.diskStorage({
