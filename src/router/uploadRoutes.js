@@ -11,12 +11,15 @@ const multer = require("multer");
 const path = require("path");
 //Carga de fs (filesystem) para crear directorios en caso de no existir
 const fs = require("fs");
+//Carga de UUID para incrustar nombres únicos a los archivos:
+const { v4: uuidv4 } = require("uuid");
 
 //Carga de Modelos de datos
 const animalModel = require("../models/animalModel");
 
 //Carga de utilidad para consola
 const timeStamp = require("../core/utils/timeStamp");
+const { version } = require("os");
 
 // Usamos un objeto con CONFIGURACION de Multer - El destino cambia según el req.params       ******** CONFIG
 const storage = multer.diskStorage({
@@ -39,8 +42,8 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname);
-    //Si callback está null, mantenemos los nombres de archivos originales
+    cb(null, uuidv4() + path.extname(file.originalname).toLocaleLowerCase());
+    //Si callback está null, generamos un nombre unico, y mantenemos la extension de su nombre original
   },
 });
 

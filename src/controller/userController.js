@@ -345,9 +345,9 @@ const createAnimal = async (req, res) => {
       physicFeatures,
       mainColor,
       description,
-      photo,
       //Los usuarios no podrán indicar costes, ni urgencia estos dos parámetros son exclusivos para Protectoras
     } = req.body;
+    const photo = []; //Primero se genera la ficha, luego se subirán las imágenes para tener previamente ID del animal.
 
     //Creamos esta variable para el modelo, recien registrado no tiene ningun adoptante
     const adopted = false;
