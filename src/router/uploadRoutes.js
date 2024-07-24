@@ -70,7 +70,7 @@ const upload = multer({
 
     cb("Error: El archivo no es un formato de imagen válido");
   },
-}).single("image");
+}).array("image", 5);
 
 //WRAPPER para capturar errores de Multer:
 function uploadMiddleware(req, res, next) {
@@ -138,7 +138,9 @@ router.post("/:animalId", verifyToken, async (req, res) => {
       // Usamos el nuevo middleware de carga
       uploadMiddleware(req, res, async function () {
         // Aquí colocamos el código que se ejecuta después de que el archivo se haya cargado exitosamente
-        animal.photo.push(req.file.filename);
+        req.files.forEach(async (file) => {
+          animal.photo.push(file.filename);
+        });
         await animal.save();
 
         const time = timeStamp();
