@@ -4,7 +4,6 @@ require("dotenv").config();
 //DECLARACION DE LIBRERIAS
 const express = require("express");
 const cors = require("cors");
-const multer = require("multer");
 const path = require("path");
 
 const mongoose = require("mongoose");

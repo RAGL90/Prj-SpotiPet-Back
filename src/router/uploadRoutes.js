@@ -72,7 +72,7 @@ const upload = multer({
   },
 }).array("image", 5);
 
-//WRAPPER para capturar errores de Multer:
+//WRAPPER para INICIAR MULTER y CAPTURAR errores de Multer:
 function uploadMiddleware(req, res, next) {
   upload(req, res, function (error) {
     if (error) {
@@ -135,9 +135,9 @@ router.post("/:animalId", verifyToken, async (req, res) => {
 
     //4.1 - La peticion pertenece al propietario => OK, pasamos a multer
     if (userId === animal.owner.ownerId || shelterId === animal.owner.ownerId) {
-      // Usamos el nuevo middleware de carga
+      // Llamamos al wrapper:
       uploadMiddleware(req, res, async function () {
-        // Aquí colocamos el código que se ejecuta después de que el archivo se haya cargado exitosamente
+        //Guardamos en el array photo cada archivo del array de upload
         req.files.forEach(async (file) => {
           animal.photo.push(file.filename);
         });

@@ -10,13 +10,14 @@ const getAnimals = async (req, res) => {
 
   try {
     const animals = await animalModel
-      .find()
+      .find({ status: "available" }) //Los adoptados estarán excluidos de la búsqueda general
       .sort({ urgent: -1, registerDate: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .select("-owner.ownerId -owner.ownerType");
 
     /*
+        Los adoptados estarán excluidos de la búsqueda general: .find({ status: "available" }) 
         .sort({ urgent: -1, registerDate: -1 })
         Con "-1", Mongo organiza de forma descendente, aquellos que sean urgentes se mostrarán primero, y luego el criterio será
         la fecha de registro.
@@ -37,7 +38,7 @@ const getAnimals = async (req, res) => {
       total,
       page,
       pages: Math.ceil(total / limit), // Ceil redondea al entero igual o superior, obtenemos las páginas dividiendo:
-      //                              Total de documentos / Limite de la consulta
+      //                                                                   Total de documentos / Limite de la consulta
     });
   } catch (error) {
     res.status(500).json({

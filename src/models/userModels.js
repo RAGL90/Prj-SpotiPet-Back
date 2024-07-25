@@ -80,17 +80,25 @@ const userSchema = new Schema({
   },
   userType: {
     type: String,
-    require: true,
+    required: true,
     enum: ["adopter", "admin", "deletedUser"],
     default: "adopter",
   },
   username: {
     type: String,
-    require: false,
+    required: false,
+  },
+  name: {
+    type: String,
+    required: false,
+  },
+  birth: {
+    type: Date,
+    required: false,
   },
   lastname: {
     type: String,
-    require: false,
+    required: false,
   },
   tipoNIF: {
     type: String,
@@ -100,7 +108,7 @@ const userSchema = new Schema({
   },
   NIF: {
     type: String,
-    require: false,
+    required: false,
     unique: true,
     default: "Sin NIF",
   },
@@ -121,10 +129,9 @@ const userSchema = new Schema({
     type: String,
     required: false,
   },
-  age: {
-    type: Number,
+  birthdate: {
+    type: Date,
     required: false,
-    default: 0,
   },
   phone: {
     type: String,
@@ -138,7 +145,7 @@ const userSchema = new Schema({
   },
   animalLimit: {
     type: Number,
-    require: true,
+    required: true,
     default: 0,
     max: [
       3,
@@ -151,16 +158,12 @@ const userSchema = new Schema({
     required: false,
   },
   deletedDate: {
+    //Se rellenará en caso de tener animales en la plataforma o solicitudes aceptadas.
     type: Date,
     required: false,
     default: null,
   },
 });
-
-//Función incrustada en modelo para limitar creación de animales - Habrá otra funcion en controller
-function CreatedUserLimit(value) {
-  return value.length <= 3;
-}
 
 const userModel = mongoose.model("Users", userSchema, "User");
 
