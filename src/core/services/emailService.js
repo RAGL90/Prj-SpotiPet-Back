@@ -1,6 +1,8 @@
 const nodemailer = require("nodemailer");
 const timeStamp = require("../utils/timeStamp");
 
+//COMENTAMOS LIN:28 PARA DESACTIVAR EL ENVIO DE EMAIL EN TESTS! - ESTADO ACTUAL: DESACTIVADO
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -24,7 +26,7 @@ const sendEmail = async (userEmail, messageSubject, message) => {
         },
       ],
     };
-    await transporter.sendMail(mailOptions);
+    // await transporter.sendMail(mailOptions);
     const time = timeStamp();
     console.log(`${time} Se ha enviado el email a ${userEmail} correctamente`);
   } catch (error) {

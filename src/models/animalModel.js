@@ -111,7 +111,7 @@ const animalSchema = new Schema({
   },
 });
 
-// Índice compuesto para ordenar por urgent y registerDate (El de consulta principal al llegar a la web)
+// Índice generado para abrir rápidamente en función de urgent y registerDate (Consulta principal al llegar un usuario a la web).
 animalSchema.index({ urgent: -1, registerDate: -1 });
 
 const animalModel = mongoose.model("Animals", animalSchema, "Animals");

@@ -78,27 +78,16 @@ const userSchema = new Schema({
     trim: true,
     minLength: [8, "Tiene que ser mayor de 8 caracteres"],
   },
+  pswdCode: {
+    type: Number,
+    required: false,
+    default: null,
+  },
   userType: {
     type: String,
     required: true,
     enum: ["adopter", "admin", "deletedUser"],
     default: "adopter",
-  },
-  username: {
-    type: String,
-    required: false,
-  },
-  name: {
-    type: String,
-    required: false,
-  },
-  birth: {
-    type: Date,
-    required: false,
-  },
-  lastname: {
-    type: String,
-    required: false,
   },
   tipoNIF: {
     type: String,
@@ -111,6 +100,18 @@ const userSchema = new Schema({
     required: false,
     unique: true,
     default: "Sin NIF",
+  },
+  birth: {
+    type: Date,
+    required: false,
+  },
+  name: {
+    type: String,
+    required: false,
+  },
+  lastname: {
+    type: String,
+    required: false,
   },
   province: {
     type: String,
@@ -143,6 +144,7 @@ const userSchema = new Schema({
     unique: true,
     minLength: 9,
   },
+  //LIMITE DE SOLICITUD DE ADOPCIONES
   animalLimit: {
     type: Number,
     required: true,
@@ -152,7 +154,13 @@ const userSchema = new Schema({
       "Has alcanzado el límite anual de adopciones por usuario, si requiere de más adopciones contacte con administración",
     ],
   },
+  //LIMITE DE PUESTAS EN ADOPCIONES
   animalsCreated: {
+    type: [String],
+    default: [],
+    required: false,
+  },
+  applications: {
     type: [String],
     default: [],
     required: false,

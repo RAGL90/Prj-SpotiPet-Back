@@ -12,26 +12,36 @@ const emailService = require("../core/services/emailService");
 const userRegisterMail = require("../core/services/messages/signedUpUser");
 const newPetRegisterU = require("../core/services/messages/newPetRegisterUser");
 
-//REGISTRO DE USUARIO
+//-----------------------------------------REGISTRO DE USUARIO
 const signup = async (req, res) => {
   try {
     const {
       email,
       pswd,
       userType,
-      username,
+      name,
       lastname,
-      animalLimit,
       tipoNIF,
       NIF,
+      birthDate,
       province,
       locality,
       address,
-      age,
       phone,
     } = req.body;
 
-    const animals = [];
+    let birth = null;
+
+    if (birthDate) {
+      //El usuario introduce la fecha en formato ES, ej => 31/12/2024
+      const day = birthDate.substring(0, 2);
+      const month = birthDate.substring(3, 5);
+      const year = birthDate.substring(6);
+
+      //Le restamos 1 al mes porque empieza en 0
+      birth = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    }
+
     const registerDate = new Date();
 
     const newUser = new userModel({
@@ -39,17 +49,15 @@ const signup = async (req, res) => {
       email,
       pswd: await bcrypt.hash(pswd, 10),
       userType,
-      username,
-      lastname,
       tipoNIF,
       NIF,
+      name,
+      birth,
+      lastname,
       province,
       locality,
       address,
-      age,
       phone,
-      animalLimit,
-      animals,
     });
 
     let NIFfacilitado = false;
@@ -57,10 +65,12 @@ const signup = async (req, res) => {
     if (tipoNIF === "DNI" || tipoNIF === "NIE") {
       NIFfacilitado = true;
 
+      //Creamos un objeto con la función NIFVerifier en Utils => Si es válido "control.valid será true"
       const control = NIFverifier(tipoNIF, NIF);
 
       if (!control.valid) {
-        res.status(400).json({
+        //Si el objeto control indica un error, se le pasará una respuesta presentando como error la causa de invalidación
+        return res.status(400).json({
           status: "failed",
           message: control.invalidCause,
         });
@@ -80,7 +90,7 @@ const signup = async (req, res) => {
           `${time} Usuario ${newUser.email} registrado correctamente`
         );
 
-        res.status(201).json({
+        return res.status(201).json({
           status: "succeed",
           message: "Usuario creado correctamente",
           newUser,
@@ -107,7 +117,8 @@ const signup = async (req, res) => {
 
       res.status(201).json({
         status: "succeed",
-        message: "Usuario creado correctamente",
+        message:
+          "Usuario creado correctamente, Advertencia: Sin proporcionar todos los datos no puedes adoptar",
         newUser,
       });
     }
@@ -120,7 +131,7 @@ const signup = async (req, res) => {
   }
 };
 
-//OBTENCIÓN DE USUARIOS PARA ADMIN, falta añadir control admin
+//-----------------------------------------OBTENCIÓN DE USUARIOS PARA ADMIN, falta añadir control admin
 const getUser = async (req, res) => {
   try {
     const users = await userModel.find();
@@ -138,7 +149,7 @@ const getUser = async (req, res) => {
   }
 };
 
-//LOGUEO Y VERIFICACION DE USUARIO
+//----------------------------------------- LOGUEO Y VERIFICACION DE USUARIO
 const login = async (req, res) => {
   try {
     const { email, pswd } = req.body;
@@ -210,12 +221,22 @@ Contenido del Payload:
  - Nombre de usuario.
 */
 
+//----------------------------------------- MODIFICAR DATOS DE USUARIO
 const modifyUser = async (req, res) => {
   try {
-    const idByMail = req.user.email;
-    let user = await userModel.findOne({ email: idByMail });
+    if (!req.user) {
+      return res.status(402).json({
+        status: "failed",
+        message: "Inicie sesión para realizar los cambios",
+      });
+    }
+
+    const { userId, email, userType, name } = req.user;
+
+    let user = await userModel.findById(userId);
 
     if (!user) {
+      //No sabría como ha llegado hasta aquí, dado que va con Payload
       return res.status(404).json({
         status: "failed",
         message:
@@ -224,10 +245,33 @@ const modifyUser = async (req, res) => {
     }
 
     const newUserData = req.body;
+    if (newUserData.NIF && newUserData.tipoNIF) {
+      const control = NIFverifier(tipoNIF, newUserData.NIF);
+      if (!control.valid) {
+        //Si el objeto control indica un error, se le pasará una respuesta presentando como error la causa de invalidación
+        return res.status(400).json({
+          status: "failed",
+          message: control.invalidCause,
+        });
+      }
+    }
+    //ACTUALIZAMOS user.birth SOLO SI ES INDICADO, PARA ELLO LO FORMATEAMOS UTC
+    if (newUserData.birth) {
+      // 0123456789
+      //El usuario introduce la fecha en formato ES, ej => 31/12/2024
+      const day = newUserData.birth.substring(0, 2);
+      const month = newUserData.birth.substring(3, 5);
+      const year = newUserData.birth.substring(6, 10);
+
+      //Le restamos 1 al mes porque en formato UTC empieza en 0 los meses
+      const birthFormatted = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+      user.birth = birthFormatted;
+      console.log(user.birth);
+    }
 
     // Actualiza los campos solo si se proporcionan en newUserData
     user.email = newUserData.email || user.email;
-    user.username = newUserData.username || user.username;
+    user.name = newUserData.name || user.name;
     user.lastname = newUserData.lastname || user.lastname;
     user.age = newUserData.age || user.age;
     user.province = newUserData.province || user.province;
@@ -235,22 +279,24 @@ const modifyUser = async (req, res) => {
     user.address = newUserData.address || user.address;
     user.phone = newUserData.phone || user.phone;
 
-    if (newUserData.userType || newUserData.animalLimit) {
+    if (
+      newUserData.userType ||
+      newUserData.animalLimit ||
+      newUserData.animalsCreated
+    ) {
+      //Si trata de modificar el tipo de usuario, su limite de adopciones, o la cantidad en adopción
       return res.status(401).json({
         status: "failed",
         message: "Petición no autorizada",
       });
     }
-
     await user.save(); // Guarda los cambios en la base de datos
-    console.log(`Se han guardado los siguientes datos:
-      Email de usuario: ${user.email}
-      Nombre de usuario: ${user.username}
-      Apellidos de usuario: ${user.lastname}
-      Edad del usuario: ${user.age}
-    `);
 
-    res.status(201).json({
+    console.log(
+      `Se han guardado los siguientes datos del usuario: ${user.email}`
+    );
+
+    return res.status(201).json({
       status: "success",
       message: "Datos del usuario modificados correctamente",
       error: null,
@@ -265,6 +311,7 @@ const modifyUser = async (req, res) => {
   }
 };
 
+//----------------------------------------- ELIMINACION DEL USUARIO
 const deleteUser = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -328,7 +375,7 @@ const deleteUser = async (req, res) => {
 
 // -------------------------------------MANIPULACION DEL MODELO ANIMALES --------------------------------------------------
 
-//-----------> CREAR ANIMAL
+//----------------------------------------------------> CREAR ANIMAL (Formato limitado)
 const createAnimal = async (req, res) => {
   try {
     //Variables del animal rellena el creador => req.body
@@ -414,13 +461,13 @@ const createAnimal = async (req, res) => {
       adopted,
     });
 
-    //Modificamos la ficha de la protectora para que vea en su panel el nuevo animal registrado
+    //Modificamos la ficha del usuario para que en su panel se observe el estado del nuevo animal registrado
     let user = await userModel.findById(userId);
-    if (user.animalLimit < 3) {
+    if (user.animalsCreated < 3) {
       //Guardamos nuestra mascota
       await newAnimal.save();
 
-      user.animalLimit++;
+      user.animalsCreated++;
       user.animalsCreated.push(newAnimal._id);
 
       await user.save();
@@ -487,7 +534,7 @@ const createAnimal = async (req, res) => {
   }
 };
 
-//-----------> ELIMINAR ANIMAL
+//----------------------------------------------------> ELIMINAR ANIMAL
 const deleteAnimal = async (req, res) => {
   try {
     const { animalId } = req.body;
@@ -516,7 +563,7 @@ const deleteAnimal = async (req, res) => {
       if (userId === animal.owner.ownerId) {
         //Revisamos si el animal ha sido adoptado:
         if (!animal.adopted) {
-          //Si no hay adoptante, el usuario lo ha borrado por otros motivos, procedemos al borrado del animal
+          //Si no hay adoptante, procedemos al borrado del animal
           await animalModel.findByIdAndDelete(animalId);
           //Informamos en consola
           const time = timeStamp();
@@ -540,7 +587,7 @@ const deleteAnimal = async (req, res) => {
           });
           return;
         } else {
-          //En este caso si había adoptante para este animal, lo borramos pero NO se reduce el animalLimit
+          //En este caso si había adoptante para este animal, borramos el animal pero NO se reduce el animalLimit
           await animalModel.findByIdAndDelete(animalId);
           //Informamos en consola
           const time = timeStamp();
