@@ -41,6 +41,11 @@ const applySchema = new Schema({
     required: true,
     index: true,
   },
+  refusedDescr: {
+    type: String,
+    required: false,
+    default: null,
+  },
   applicantId: {
     //ID de BBDD (será indicada automáticamente)
     type: String,
@@ -48,7 +53,6 @@ const applySchema = new Schema({
   },
   applicantNIF: {
     type: String,
-    unique: true,
     required: true,
   },
   applicantName: {
@@ -61,7 +65,6 @@ const applySchema = new Schema({
   },
   applicantEmail: {
     type: String,
-    unique: true,
     trim: true,
     minLength: 6,
     match: [/^\S+@\S+\.\S+$/, "Correo incorrecto"],
@@ -76,7 +79,6 @@ const applySchema = new Schema({
       /^[679]\d{8}$/,
       "Numero de telefono incorrecto, no es necesario indicar prefijo nacional (+34)",
     ],
-    unique: true,
     minLength: 9,
     required: [
       true,
@@ -181,7 +183,6 @@ const applySchema = new Schema({
       /^[679]\d{8}$/,
       "Numero de telefono incorrecto, no es necesario indicar el prefijo (+34)",
     ],
-    unique: true,
     minLength: 9,
   },
   transferEmail: {
@@ -190,7 +191,6 @@ const applySchema = new Schema({
       true,
       "El correo es obligatorio para informar de las solicitudes de los usuarios",
     ],
-    unique: true,
     trim: true,
     minLength: 6,
     match: [/^\S+@\S+\.\S+$/, "Correo incorrecto"],
@@ -208,6 +208,9 @@ const applySchema = new Schema({
     required: true,
   },
 });
+
+//Indice para buscar rápidamente los ID para evitar duplicados
+applySchema.index({ applicantId: 1, reqAnimalId: 1 }, { unique: true });
 
 const requestModel = mongoose.model("requests", applySchema, "requests");
 

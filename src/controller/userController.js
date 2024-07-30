@@ -2,6 +2,7 @@
 //  Modelos de datos
 const userModel = require("../models/userModels");
 const animalModel = require("../models/animalModel");
+const requestModel = require("../models/requestModel");
 //  Utilidades para acciones de usuario
 const generateToken = require("../core/middleware/auth/auth");
 const NIFverifier = require("../core/utils/NIFverifier");
@@ -317,51 +318,73 @@ const deleteUser = async (req, res) => {
     const userId = req.user.userId;
     const userData = await userModel.findById(userId);
 
-    if (userData) {
-      if (userData.animalLimit != 0) {
-        /* En caso de que haya subido algún animal se guardarán datos mínimos
-        para evitar fraudes o intentos de evitar la medida de control del
-        limite del animal, en RGPD se conoce como interés legítimo
-        Estos datos son el NIF y el email, pasado un tiempo prudente se hará
-        un borrado del usuario.
-        */
-        userData.pswd = "userDeleted-000";
-        userData.username = "Usuario eliminado";
-        userData.lastname = null;
-        userData.age = 0;
-        userData.province = null;
-        userData.locality = null;
-        userData.address = null;
-        userData.phone = null;
-        userData.userType = "deletedUser";
-        userData.deletedDate = new Date();
-        res.status(200).json({
-          status: "success",
-          message: "Datos de usuario eliminados satisfactoriamente",
-          error: null,
-        });
-        return;
-      } else {
-        //En caso de que no haya ningun animal subido, boraremos inmediatamente sus datos:
-        await userModel.findByIdAndDelete(userId);
-        res.status(200).json({
-          status: "success",
-          message: "Datos de usuario eliminados satisfactoriamente",
-          error: null,
-        });
-        const time = timeStamp();
-        console.log(
-          `${time} usuario ${userData.username} eliminado correctamente`
-        );
-        return;
-      }
-    } else {
-      res.status(404).json({
+    if (!userData) {
+      return res.status(404).json({
         status: "failed",
-        message: "No localizado la usuario",
-        error: "usuario no localizado",
+        message: "Usuario no encontrado, inicie sesion por favor",
       });
-      return;
+    }
+
+    /* En caso de que el usuario haya adoptado/creado algún animal se guardarán datos mínimos
+    para evitar fraudes o intentos de evitar la medida de control del limite del animal.
+    
+    Legalmente se conoce en RGPD se conoce como interés legítimo estos datos que se guardarán
+    son el NIF y el email, pasado un tiempo prudente se hará un borrado del usuario.
+    */
+
+    //Borrado de solicitudes rechazadas o pendientes - Las aceptadas se mantienen por seguridad!
+    await requestModel.deleteMany({
+      applicantId: userId,
+      status: { $in: ["pending", "refused"] },
+    });
+
+    if (userData.animalLimit != 0 || userData.createAnimal != 0) {
+      //Si uno de estos parámetros está alterado, el usuario ha creado o adoptado un animal
+
+      userData.pswd = "userDeleted-000";
+      userData.username = "Usuario eliminado";
+      userData.lastname = null;
+      userData.birth = new Date();
+      userData.province = null;
+      userData.locality = null;
+      userData.address = null;
+      userData.phone = null;
+      userData.userType = "deletedUser";
+      userData.deletedDate = new Date();
+
+      const time = timeStamp();
+      console.log(
+        `${time} usuario con ID: ${userId} eliminado con reservas de informacion-!!!`
+      );
+
+      await userData.save();
+
+      return res.status(200).json({
+        status: "success",
+        message: `Gran parte de los datos de usuario eliminados.
+          Debido a su actividad en la plataforma se han reservado datos mínimos para garantizar la seguridad de los animales
+          * Los datos que se han mantenido son: Email, NIF y solicitudes de adopciones aceptadas.
+          
+          Garantizamos que el email no será utilizado para ningún tipo de contacto.
+
+          Pasado un tiempo prudencial serán eliminados los datos
+          `,
+        error: null,
+      });
+    } else {
+      //En caso de que no haya ningun animal subido, boraremos inmediatamente sus datos:
+      await userModel.findByIdAndDelete(userId);
+
+      const time = timeStamp();
+      console.log(
+        `${time} usuario ${userData.username} eliminado correctamente`
+      );
+
+      return res.status(200).json({
+        status: "success",
+        message: "Datos de usuario eliminados satisfactoriamente",
+        error: null,
+      });
     }
   } catch (error) {
     console.error(error);
@@ -375,7 +398,7 @@ const deleteUser = async (req, res) => {
 
 // -------------------------------------MANIPULACION DEL MODELO ANIMALES --------------------------------------------------
 
-//----------------------------------------------------> CREAR ANIMAL (Formato limitado)
+//-----------------------------------------> CREAR ANIMAL
 const createAnimal = async (req, res) => {
   try {
     //Variables del animal rellena el creador => req.body
@@ -437,7 +460,7 @@ const createAnimal = async (req, res) => {
     }
     const registerDate = new Date();
 
-    //Finalmente creamos el nuevo animal
+    //CREACION de ANIMAL
     const newAnimal = new animalModel({
       registerDate,
       specie,
@@ -466,8 +489,6 @@ const createAnimal = async (req, res) => {
     if (user.animalsCreated < 3) {
       //Guardamos nuestra mascota
       await newAnimal.save();
-
-      user.animalsCreated++;
       user.animalsCreated.push(newAnimal._id);
 
       await user.save();
@@ -477,7 +498,7 @@ const createAnimal = async (req, res) => {
         `${time} Nueva mascota: ${newAnimal.name} , tipo ${newAnimal.specie} - Creado correctamente`
       );
 
-      //Pasamos respuesta al cliente.
+      //Pasamos respuesta al cliente. Sin return => Continuar con los servicios de emailing
       res.status(200).json({
         status: "success",
         message: `La mascota ${newAnimal.name} está creada correctamente`,
@@ -510,6 +531,7 @@ const createAnimal = async (req, res) => {
         newAnimal.specie,
         user.animalLimit
       );
+
       await emailService.sendEmail(user.email, messageSubject, message);
       //Finaliza el registro
       return;
@@ -538,90 +560,101 @@ const createAnimal = async (req, res) => {
 const deleteAnimal = async (req, res) => {
   try {
     const { animalId } = req.body;
+
     if (!req.user) {
-      res.status(403).json({
+      return res.status(403).json({
         status: "failed",
         message: "Es necesario estar registrado y logueado para esta acción",
         error: "Imposible procesar la solicitud",
       });
-      return;
     }
-    // 1º EXTRAEMOS DATOS DEL PAYLOAD.
+
+    //Extraemos datos del payload
     const { userId, email, userType, name } = req.user;
+
+    //Buscamos animal por el ID
     const animal = await animalModel.findById(animalId);
-    // 2º CONTEMPLAMOS QUE ANIMAL NO EXISTE.
+
+    //Verificamos que el animal existe
     if (!animal) {
-      res.status(404).json({
+      return res.status(404).json({
         status: "failed",
         message:
           "Animal no localizado por favor, revise si la ID proporcionada es correcta",
         error: "Animal no localizado",
       });
-      return;
-    } else {
-      //3º Comprobamos que el ownerID y el Payload sean el mismo, si no, no se puede realizar esta acción.
-      if (userId === animal.owner.ownerId) {
-        //Revisamos si el animal ha sido adoptado:
-        if (!animal.adopted) {
-          //Si no hay adoptante, procedemos al borrado del animal
-          await animalModel.findByIdAndDelete(animalId);
-          //Informamos en consola
-          const time = timeStamp();
-          console.log(
-            `${time} - ${animalId} - ${animal.name} eliminado del registro`
-          );
-          //Borrado del animal en el array del usuario.
-          //Actualización del límite del animal
-          await userModel.findByIdAndUpdate(userId, {
-            $inc: { animalLimit: -1 },
-            $pull: { animalsCreated: animalId },
-            //                                   https://www.mongodb.com/docs/manual/reference/operator/update/inc/
-            //                                   https://www.mongodb.com/docs/manual/reference/operator/update/pull/
-          });
+    }
 
-          //Indicamos respuesta HTTP
-          res.status(202).json({
-            status: "success",
-            message: "Animal eliminado correctamente",
-            error: null,
-          });
-          return;
-        } else {
-          //En este caso si había adoptante para este animal, borramos el animal pero NO se reduce el animalLimit
-          await animalModel.findByIdAndDelete(animalId);
-          //Informamos en consola
-          const time = timeStamp();
-          console.log(
-            `${time} - ${user.email} elimina el registro del animal: ${animalId} - SIN actualizacion de límite`
-          );
-          //Borrado del animal en el array del usuario. Sin reducir el límite de adopciones.
-          await userModel.findByIdAndUpdate(userId, {
-            $pull: { animalsCreated: animalId },
-          });
-          //Indicamos respuesta HTTP
-          res.status(202).json({
-            status: "success",
-            message: "Animal eliminado correctamente",
-            error: null,
-          });
-          return;
-        }
-      }
-      //En este lado, las ID del propietario y del Payload que intenta hacer la accion son diferentes.
-      res.status(404).json({
+    //Verificamos que sea el propietario del animal
+    if (userId !== animal.owner.ownerId) {
+      return res.status(403).json({
         status: "failed",
         message: "El usuario difiere del propietario del animal",
         error: "No se pudo borrar el animal",
       });
-      return;
+    }
+
+    //Revisamos si el animal ha sido adoptado:
+    if (animal.adopted === "available") {
+      //Rechazamos todas las solicitudes indicando el motivo a los usuarios.
+      await requestModel.updateMany(
+        { reqAnimalId: animalId, status: "pending" }, //Filtro de busqueda
+        {
+          $set: {
+            status: "refused",
+            refusedDescr:
+              "Animal eliminado de la plataforma por el propietario ¡Lamentamos las molestias!",
+          },
+        } //Accion para cada encuentro
+      );
+
+      await animalModel.findByIdAndDelete(animalId);
+
+      //Informamos en consola
+      const time = timeStamp();
+      console.log(
+        `${time} - ${animalId} - ${animal.name} eliminado del registro`
+      );
+
+      //Actualización del límite del animal => https://www.mongodb.com/docs/manual/reference/operator/update/pull/
+      await userModel.findByIdAndUpdate(userId, {
+        $pull: { animalsCreated: animalId }, //Extraemos el ID del animal del array
+      });
+
+      //Indicamos respuesta HTTP
+      return res.status(202).json({
+        status: "success",
+        message: "Animal eliminado correctamente",
+        error: null,
+      });
+    } else {
+      //En este caso si había adoptante para este animal
+
+      // Borramos el animal pero NO se reduce el animalLimit
+      await animalModel.findByIdAndDelete(animalId);
+
+      //Informamos en consola
+      const time = timeStamp();
+      console.log(
+        `${time} - ${user.email} elimina el registro del animal: ${animalId} - SIN actualizacion de límite`
+      );
+
+      const user = await userModel.findById(userId);
+      const counter = 3 - user.createAnimal.length;
+      //Indicamos respuesta HTTP
+      return res.status(202).json({
+        status: "success",
+        message: `Animal eliminado de la plataforma correctamente.
+        Su límite temporal de creacion de animales en la plataforma es de ${counter}`,
+        error: null,
+      });
     }
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: "failed",
       message: "No se ha podido borrar el animal",
       error: error.message,
     });
-    return;
   }
 };
 

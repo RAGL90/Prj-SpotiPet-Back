@@ -151,6 +151,11 @@ const shelterSchema = new Schema({
     default: false,
     required: false,
   },
+  requests: {
+    type: [String],
+    required: false,
+    default: [],
+  },
   web: {
     type: String,
     default: "",

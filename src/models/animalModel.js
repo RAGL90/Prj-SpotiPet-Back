@@ -9,9 +9,9 @@ const animalSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["avaliable", "adopted"],
+    enum: ["available", "adopted"],
     required: true,
-    default: "avaliable",
+    default: "available",
   },
   specie: {
     type: String,

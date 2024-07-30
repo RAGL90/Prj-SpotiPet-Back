@@ -160,10 +160,17 @@ const userSchema = new Schema({
     default: [],
     required: false,
   },
+  //SOLICITUDES REALIZADAS
   applications: {
     type: [String],
     default: [],
     required: false,
+  },
+  //SOLICITUDES RECIBIDAS
+  requests: {
+    type: [String],
+    required: false,
+    default: [],
   },
   deletedDate: {
     //Se rellenará en caso de tener animales en la plataforma o solicitudes aceptadas.

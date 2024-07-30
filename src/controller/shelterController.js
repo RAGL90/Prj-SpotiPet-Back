@@ -2,6 +2,7 @@ const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
 const shelterModel = require("../models/shelterModel");
 const animalModel = require("../models/animalModel");
+const requestModel = require("../models/requestModel");
 
 const bcrypt = require("bcrypt");
 const generateToken = require("../core/middleware/auth/auth");
@@ -256,7 +257,7 @@ const createAnimal = async (req, res, next) => {
       cost,
       urgent,
     } = req.body;
-    //                                  Renombramos name del payload para evitar conflictos con name del animal que se va a crear
+
     const photo = []; //Primero se genera la ficha, luego se subirán las imágenes para tener previamente el ID del animal => carpeta donde ubicar photos
     if (!req.user) {
       res.status(403).json({

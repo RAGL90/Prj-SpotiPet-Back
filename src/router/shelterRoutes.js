@@ -16,16 +16,27 @@ const {
   modifyAnimal,
 } = require("../controller/shelterController");
 
+const {
+  getRequests,
+  choiceRequest,
+} = require("../controller/requestController");
+
+//Area sin verificación, crear usuario y login:
 router.post("/signup", signUpShelter);
 router.post("/login", shelterLogin);
 
-//Subida de imágenes del animal tras verificar el token => Procedemos a la aceptación de subida de fotos en array y creamos el animal
-
+//Creacion del animal (Las fotos tienen su propio routes que será llamado tras la creacion de ficha así podemos crear un ID)
 router.post("/animal", verifyToken, createAnimal);
 
+//Modificaciones y eliminaciones del animal - TAREA: Falta solventar solicitudes en caso de delete del ANIMAL
 router.delete("/animal", verifyToken, deleteAnimal);
 router.patch("/animal", verifyToken, modifyAnimal);
 
+//CONSULTA y MODIFICACION de SOLICITUDES:
+router.get("/request", verifyToken, getRequests);
+router.patch("/request/:requestId", verifyToken, choiceRequest);
+
+//Modificaciones y eliminaciones del Shelter - TAREA: Falta solventar solicitudes en caso de delete de la protectora.
 router.patch("/panel/:id", verifyToken, modifyShelter);
 router.delete("/panel/:id", verifyToken, deleteShelter);
 

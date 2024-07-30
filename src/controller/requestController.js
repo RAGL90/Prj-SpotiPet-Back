@@ -25,6 +25,8 @@ const userModel = require("../models/userModels");
 const shelterModel = require("../models/shelterModel");
 const requestModel = require("../models/requestModel");
 
+const timeStamp = require("../core/utils/timeStamp");
+
 const createRequest = async (req, res) => {
   try {
     //Filtro 1. ¿Está logueado?
@@ -47,7 +49,7 @@ const createRequest = async (req, res) => {
       });
     }
     //Filtro 3. ¿El animal está disponible?
-    if (animal.status !== "available") {
+    if (animal.status != "available") {
       return res.status(403).json({
         status: "failed",
         message: "Animal ya adoptado, imposible generar solicitud",
@@ -73,7 +75,7 @@ const createRequest = async (req, res) => {
       "locality",
       "province",
       "address",
-      "age",
+      "birth",
     ];
 
     //Revisamos con Every que todos los campos requeridos se encuentren Y que sea adopter:
@@ -109,8 +111,6 @@ const createRequest = async (req, res) => {
         1000 (milisegundos que tiene cada segundo)
         */
 
-    console.log(`TEST: La edad del solicitante es de ${age} años`);
-
     if (age < 18) {
       return res.status(451).json({
         status: "failed",
@@ -118,10 +118,31 @@ const createRequest = async (req, res) => {
       });
     }
 
+    const existingRequest = await requestModel.findOne({
+      applicantId: applicantUser._id,
+      reqAnimalId: animal._id,
+    });
+
+    if (existingRequest) {
+      return res.status(409).json({
+        status: "failed",
+        message: "Solicitud ya existente",
+      });
+    }
+
+    if (applicantUser.animalLimit >= 3) {
+      //En ningún caso debe ser mayor a 3.
+      return res.status(400).json({
+        status: "failed",
+        message:
+          "Limite de adopciones alcanzado, debe aguardar un año desde la adopción",
+      });
+    }
+
     //El usuario ha pasado todos los controles => RECOGEMOS DATOS DEL .owner DEL ANIMAL:
     actualOwnerId = animal.owner.ownerId; //Extraemos ID
 
-    //Elaboración de ficha de request en funcion de propietario.
+    //Elaboración de ficha de request en funcion del tipo de propietario.
     let transfer;
     if (animal.owner.ownerType === "adopter") {
       transfer = await userModel.findById(actualOwnerId);
@@ -165,7 +186,19 @@ const createRequest = async (req, res) => {
     });
 
     await newRequest.save();
-    //AHORA EMAIL SERVICE Y CREACION DE PDF
+
+    transfer.requests.push(newRequest._id); //Se introduce ID de la solicitud en Solicitudes Recibidas
+    applicantUser.applications.push(newRequest._id); //Aqui en Solicitudes Enviadas
+
+    await transfer.save();
+    await applicantUser.save();
+
+    const time = timeStamp();
+    console.log(
+      `${time} Solicitud de ${applicantUser.name} para ${animal.name}, propietario: ${transfer.name}`
+    );
+
+    //EMAIL SERVICE Y CREACION DE PDF
 
     res.status(201).json({
       status: "succeed",
@@ -173,7 +206,7 @@ const createRequest = async (req, res) => {
       newRequest,
     });
   } catch (error) {
-    return rest.status(500).json({
+    return res.status(500).json({
       status: "failed",
       message: "No se puede completar la solicitud de adopcion",
       error: error.message,
@@ -181,4 +214,160 @@ const createRequest = async (req, res) => {
   }
 };
 
-module.exports = { createRequest };
+//-----------------CONSULTA DE SOLICITUDES - PROTECTORA
+const getRequests = async (req, res) => {
+  //Preestablecemos la vista, a menos que se indique lo contrario.
+  let { page, limit } = req.query;
+
+  page = parseInt(page) || 1; // Si no se indica, default: 1
+  limit = parseInt(limit) || 20; // default: 20
+  limit = limit > 50 ? 50 : limit; //Ternario para no hacer una consulta enorme en el endpoint
+
+  try {
+    const { shelterId, userId } = req.user; //El payload traerá uno de estos campos
+    const userType = shelterId ? "shelter" : "user"; //Con el ternario filtramos las dos situaciones usuario con puesta de adopcion o protectora
+
+    const user =
+      userType === "shelter"
+        ? await shelterModel.findById(shelterId)
+        : await userModel.findById(userId);
+
+    // Contar el número total de solicitudes
+    const total = await requestModel.countDocuments({
+      _id: { $in: user.requests },
+      //Contar número de documentos en los que en el ID se encuentren las solicitudes
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "failed",
+        message: "No está identificado, por favor, inicie sesión",
+      });
+    }
+    const arrayRequestToPromise = user.requests.map((requestId) =>
+      requestModel.findById(requestId)
+    );
+    const arrayRequest = await Promise.all(arrayRequestToPromise);
+
+    /*
+      La intención inicial era hacer un bucle "for" con el número de solicitudes, pero esto hace que haga un AWAIT SECUENCIAL:
+      Ej: "1ª ¿Se cumple? Sí, pues pasamos a la 2ª ¿Se cumple? Sí, a la tercera ID del array ¿Se cumple?" y asi sucesivamente.
+
+      Con el uso de Promise.all se ejecutan MÚLTIPLES PROMESAS SIMULTANEAS, iniciándose una búsqueda de todos los indices del array a la vez.
+      Esto mejora el rendimiento:
+      Si la protectora tiene 10 solicitudes no notaría la diferencia, pero si tiene 500 solicitudes, el tiempo de espera es bastante notable.
+    */
+    return res.status(200).json({
+      status: "success",
+      data: arrayRequest,
+      //Datos de visualizacion y carga:
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "failed",
+      message: "Error en la operación de búsqueda de solicitudes",
+      error: error.message,
+    });
+  }
+};
+
+const choiceRequest = async (req, res) => {
+  //La protectora o usuario propietario ha obtenido detalles de la solicitud, elige: Aceptar o Rechazar.
+  try {
+    const { shelterId, userId } = req.user;
+    const userType = shelterId ? "shelter" : "user";
+
+    const user =
+      userType === "shelter"
+        ? await shelterModel.findById(shelterId)
+        : await userModel.findById(userId);
+
+    // Filtro de logueo
+    if (!user) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Sin autorización para esta solicitud, inicie sesión",
+      });
+    }
+
+    const requestId = req.params.requestId;
+    const request = await requestModel.findById(requestId);
+
+    // Filtro de solicitud inexistente
+    if (!request) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Solicitud indicada no existe, revise la ID de la solicitud",
+      });
+    }
+
+    // Revisamos que no esté aceptado ninguna otra solicitud para el mismo animal
+    const acceptedRequest = await requestModel.findOne({
+      status: "accepted",
+      reqAnimalId: request.reqAnimalId,
+    });
+
+    // Indicamos respuesta en caso de que exista
+    if (acceptedRequest) {
+      return res.status(409).json({
+        status: "failed",
+        message:
+          "Solicitud del animal ya aceptado para otro usuario, no se puede aceptar",
+      });
+    }
+
+    const { choice, description } = req.body;
+
+    if (choice === "accepted") {
+      const applyUser = await userModel.findById(request.applicantId);
+      //Se decide aceptar solicitud buscamos al usuario de la solicitud para ampliar el limite de animales (hasta 3) para evitar abusos.
+      applyUser.animalLimit++;
+      await applyUser.save();
+
+      const animal = animalModel.findById(request.animalId);
+      animal.status = "adopted";
+      await animal.save();
+
+      request.status = "accepted";
+      await request.save();
+
+      /* 
+      Si la solicitud se acepta, rechazamos todas las demás solicitudes para el mismo animal
+      Para ello, usamos el updateMany de Mongoose indicando como filtro el id del animal y todas aquellas solicitudes NO ACEPTADAS.
+      Y modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo.
+
+      $ne => not igual (para un único valor)
+      $nin => not in (en una enumeración)
+      */
+      await requestModel.updateMany(
+        { reqAnimalId: request.reqAnimalId, status: "pending" }, //Filtro de busqueda
+        {
+          $set: {
+            status: "refused",
+            refusedDescr:
+              "Animal cedido a otro usuario ¡Lamentamos las molestias!",
+          },
+        } //Accion para cada encuentro
+      );
+    } else {
+      request.status = "refused";
+      request.refusedDescr = description; //Motivos de negación de la solicitud (si la protectora quiere expresarlo)
+      await request.save();
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: `Declarado el nuevo estado de la solicitud a "${choice}"`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se puede realizar solicitud",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { createRequest, getRequests, choiceRequest };
