@@ -394,51 +394,107 @@ const deleteAnimal = async (req, res) => {
     // 1º EXTRAEMOS DATOS DEL PAYLOAD.
     const { shelterId, email, userType, name } = req.user;
     const animal = await animalModel.findById(animalId);
-    // 2º CONTEMPLAMOS QUE ANIMAL NO EXISTE.
+    // 2º CONTEMPLAMOS QUE ANIMAL EXISTE.
     if (!animal) {
-      res.status(404).json({
+      return res.status(404).json({
         status: "failed",
         message:
           "Animal no localizado por favor, revise si la ID proporcionada es correcta",
         error: "Animal no localizado",
       });
-      return;
-    } else {
-      //3º Comprobamos que el ownerID y el Payload sean el mismo, si no, no se puede realizar esta acción.
-      if (shelterId === animal.owner.ownerId) {
-        //Procedemos al borrado del animal
-        await animalModel.findByIdAndDelete(animalId);
-        //Informamos en consola
-        const time = timeStamp();
-        console.log(
-          `${time} - ${animalId} - ${animalModel.name} eliminado del registro`
-        );
-        //Borrado del animal en el array de la protectora.
-        await shelterModel.findByIdAndUpdate(shelterId, {
-          $pull: { animals: animalId },
-        });
-        //Indicamos respuesta HTTP
-        res.status(202).json({
-          status: "success",
-          message: "Animal eliminado correctamente",
-          error: null,
-        });
-        return;
-      }
-      res.status(404).json({
+    }
+    //3º Comprobamos que sea propietario del animal, si no, no se puede realizar esta acción.
+    if (shelterId !== animal.owner.ownerId) {
+      return res.status(404).json({
         status: "failed",
         message: "El usuario difiere del propietario del animal",
         error: "No se pudo borrar el animal",
       });
-      return;
     }
+
+    if (animal.status === "adopted") {
+      //Procedemos al borrado del animal.
+      await animalModel.findByIdAndDelete(animalId);
+      //NO ACCEDEMOS A SOLICITUDES:
+      //Si está adoptado, la solicitud está aceptada para un usuario y todas las "pending" pasa a ser rechazadas con causa
+
+      //Informamos en consola
+      const time = timeStamp();
+      console.log(
+        `${time} - ${animalId} - ${animal.name} eliminado del registro por parte de la protectora con ID: ${shelterId}`
+      );
+
+      //Indicamos respuesta HTTP - Los datos guardados del animal están en el área de solicitudes que tiene los datos necesarios
+      return res.status(202).json({
+        status: "success",
+        message:
+          "Animal adoptado eliminado correctamente, se reservan algunos datos por derecho de informacion del usuario adoptante",
+        error: null,
+      });
+    }
+    //El animal no estaba adoptado, hay que informar si tenía solicitantes
+    const requests = await requestModel.find({
+      reqAnimalId: animalId,
+      status: "pending",
+    });
+    if (requests) {
+      //Habían solicitantes:
+      //Procedemos a enviar su email informativo usando "For of" (de ES6) => Recorremos el array extraido en mongoose:
+      for (const request of requests) {
+        //Generamos asunto:
+        const messageSubject = `Spot My Pet 🐾 - Actualización sobre tu solicitud de adopción de ${animal.name}`;
+        //Promesa (porque el envío de email puede fallar)
+        try {
+          //Generamos mensaje con la plantilla de deleted
+          const message = await userInfoDeletedPet(
+            request.applicantName,
+            animal.name
+          );
+
+          //Llamamos a nodemailer - Enviando asunto y plantilla
+          await emailService.sendEmail(
+            request.applicantEmail,
+            messageSubject,
+            message
+          );
+        } catch (error) {
+          //Capturamos posible error:
+          console.error(
+            `Error al enviar email a ${request.applicantEmail}: ${error}`
+          );
+        }
+      }
+    }
+
+    //3. Actualizamos todos los requests de pending a refused, con una declaración automatizada
+    await requestModel.updateMany(
+      { reqAnimalId: animalId, status: "pending" }, //Filtro de busqueda
+      {
+        $set: {
+          status: "refused",
+          refusedDescr:
+            "Animal eliminado de la plataforma por el propietario ¡Lamentamos las molestias!",
+        },
+      } //Accion para cada encuentro
+    );
+
+    //Borrado del animal en el array de la protectora.
+    await shelterModel.findByIdAndUpdate(shelterId, {
+      $pull: { animals: animalId },
+    });
+
+    //Indicamos respuesta HTTP
+    return res.status(202).json({
+      status: "success",
+      message: "Animal eliminado correctamente",
+      error: null,
+    });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: "failed",
       message: "No se ha podido borrar el animal",
       error: error.message,
     });
-    return;
   }
 };
 

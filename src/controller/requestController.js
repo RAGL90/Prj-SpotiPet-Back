@@ -20,12 +20,20 @@ Request funcionará de la siguiente forma:
     - En caso de aceptar => Estado del animal => "Adopted", Estado de request = "accepted".
 */
 
+//Todos los modelos serán requeridos en este módulo:
 const animalModel = require("../models/animalModel");
 const userModel = require("../models/userModels");
 const shelterModel = require("../models/shelterModel");
 const requestModel = require("../models/requestModel");
 
+//Utilidades internas
 const timeStamp = require("../core/utils/timeStamp");
+
+//Servicios de email:
+const userInfoAnotherAdoptedPet = require("../core/services/messages/userInfoAnotherAdoptedPet");
+const emailService = require("../core/services/emailService");
+
+//Servicio de PDFKit:
 
 const createRequest = async (req, res) => {
   try {
@@ -309,7 +317,7 @@ const choiceRequest = async (req, res) => {
       reqAnimalId: request.reqAnimalId,
     });
 
-    // Indicamos respuesta en caso de que exista
+    // Indicamos respuesta en caso de que ya esté aceptada la solicitud para otro usuario
     if (acceptedRequest) {
       return res.status(409).json({
         status: "failed",
@@ -333,33 +341,82 @@ const choiceRequest = async (req, res) => {
       request.status = "accepted";
       await request.save();
 
-      /* 
-      Si la solicitud se acepta, rechazamos todas las demás solicitudes para el mismo animal
-      Para ello, usamos el updateMany de Mongoose indicando como filtro el id del animal y todas aquellas solicitudes NO ACEPTADAS.
-      Y modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo.
+      if (animal.status === "adopted") {
+        //Abrimos este if solo para sacar del scope las mismas const declaradas abajo en el email.
+        const messageSubject = `Spot My Pet 🐾 - ¡Felicidades! ¡Has sido seleccionado para adoptar a  ${animal.name}! 😄`;
+        const message = await userInfoGrantedAdoption(
+          applyUser.name,
+          animal.name,
+          user.name,
+          user.email,
+          user.phone
+        );
+        await emailService.sendEmail(applyUser.email, messageSubject, message);
+      }
 
-      $ne => not igual (para un único valor)
-      $nin => not in (en una enumeración)
+      //Recopilamos todos los request en estado "pending"
+      const requests = await requestModel.find({
+        reqAnimalId: animalId,
+        status: "pending",
+      });
+
+      //Procedemos a enviarles el email:
+      if (requests) {
+        //Habían solicitantes:
+        //Procedemos a enviar su email informativo usando "For of" (de ES6) => Recorremos el array extraido en mongoose:
+        for (const request of requests) {
+          //Generamos asunto:
+          const messageSubject = `Spot My Pet 🐾 - Actualización sobre tu solicitud de adopción de ${animal.name}`;
+          //Promesa (porque el envío de email puede fallar)
+          try {
+            //Generamos mensaje con la plantilla de deleted
+            const message = await userInfoAnotherAdoptedPet(
+              request.applicantName,
+              animal.name,
+              user.name
+            );
+
+            //Llamamos a nodemailer - Enviando asunto y plantilla
+            await emailService.sendEmail(
+              request.applicantEmail,
+              messageSubject,
+              message
+            );
+          } catch (error) {
+            //Capturamos posible error:
+            console.error(
+              `Error al enviar email a ${request.applicantEmail}: ${error}`
+            );
+          }
+        }
+      }
+
+      /* 
+      Si la solicitud se acepta, rechazamos todas las demás solicitudes para el mismo animal.
+      usamos el updateMany de Mongoose indicando como filtro el id del animal y todas aquellas solicitudes en estado "Pending".
+      Modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo.
       */
+
       await requestModel.updateMany(
         { reqAnimalId: request.reqAnimalId, status: "pending" }, //Filtro de busqueda
         {
+          //Accion para cada encuentro de la busqueda
           $set: {
             status: "refused",
-            refusedDescr:
-              "Animal cedido a otro usuario ¡Lamentamos las molestias!",
+            refusedDescr: `Se ha cedido la mascota ${animal.name} a otro usuario ¡Lamentamos las molestias!`,
           },
-        } //Accion para cada encuentro
+        }
       );
     } else {
       request.status = "refused";
       request.refusedDescr = description; //Motivos de negación de la solicitud (si la protectora quiere expresarlo)
       await request.save();
+      //FALTA PLANTILLA DE EMAIL!
     }
 
     return res.status(200).json({
       status: "success",
-      message: `Declarado el nuevo estado de la solicitud a "${choice}"`,
+      message: `Declarado el nuevo estado de la solicitud a ${choice}`,
     });
   } catch (error) {
     res.status(500).json({

@@ -12,6 +12,7 @@ const bcrypt = require("bcrypt");
 const emailService = require("../core/services/emailService");
 const userRegisterMail = require("../core/services/messages/signedUpUser");
 const newPetRegisterU = require("../core/services/messages/newPetRegisterUser");
+const userInfoDeletedPet = require("../core/services/messages/userInfoDeletedPet");
 
 //-----------------------------------------REGISTRO DE USUARIO
 const signup = async (req, res) => {
@@ -595,8 +596,44 @@ const deleteAnimal = async (req, res) => {
     }
 
     //Revisamos si el animal ha sido adoptado:
-    if (animal.adopted === "available") {
-      //Rechazamos todas las solicitudes indicando el motivo a los usuarios.
+    if (animal.status === "available") {
+      //Tenemos que rechazar todas las solicitudes pendientes indicando el motivo a los usuarios vía email.
+      //1.1 Recogemos las solicitudes en "pending"
+      const requests = await requestModel.find({
+        reqAnimalId: animalId,
+        status: "pending",
+      });
+
+      if (requests) {
+        //Habían solicitantes:
+        //Procedemos a enviar su email informativo usando "For of" (de ES6) => Recorremos el array extraido en mongoose:
+        for (const request of requests) {
+          //Generamos asunto:
+          const messageSubject = `Spot My Pet 🐾 - Actualización sobre tu solicitud de adopción de ${animal.name}`;
+          //Usamos try para generar promesa (porque el envío de email puede fallar)
+          try {
+            //Generamos mensaje con la plantilla para informar al usuario de una mascota eliminada
+            const message = await userInfoDeletedPet(
+              request.applicantName,
+              animal.name
+            );
+
+            //Llamamos a nodemailer - Enviando asunto y plantilla generada
+            await emailService.sendEmail(
+              request.applicantEmail,
+              messageSubject,
+              message
+            );
+          } catch (error) {
+            //Capturamos posible error:
+            console.error(
+              `Error al enviar email a ${request.applicantEmail}: ${error}`
+            );
+          }
+        }
+      }
+
+      //2º Modificamos las solicitudes de todos aquellos que tenían a este animal en pending:
       await requestModel.updateMany(
         { reqAnimalId: animalId, status: "pending" }, //Filtro de busqueda
         {
@@ -628,9 +665,9 @@ const deleteAnimal = async (req, res) => {
         error: null,
       });
     } else {
-      //En este caso si había adoptante para este animal
+      //En este caso el animal estaba adoptado
 
-      // Borramos el animal pero NO se reduce el animalLimit
+      // Eliminaremos el animal, pero NO se reduce el animalLimit
       await animalModel.findByIdAndDelete(animalId);
 
       //Informamos en consola
@@ -709,13 +746,12 @@ const modifyAnimal = async (req, res) => {
         `${time} - ${animal.id} - Se ha modificado los datos ${animal.name}`
       );
 
-      res.status(202).json({
+      return res.status(202).json({
         status: "Success",
         message: "Se ha modificado los datos correctamente",
         animal,
         error: null,
       });
-      return;
     } else {
       res.status(404).json({
         status: "failed",
