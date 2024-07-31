@@ -31,9 +31,11 @@ const timeStamp = require("../core/utils/timeStamp");
 
 //Servicios de email:
 const userInfoAnotherAdoptedPet = require("../core/services/messages/userInfoAnotherAdoptedPet");
+const userInfoGrantedAdoption = require("../core/services/messages/userInfoGrantedAdoption");
 const emailService = require("../core/services/emailService");
 
 //Servicio de PDFKit:
+const createAdoptionContract = require("../core/services/generatorPDF");
 
 const createRequest = async (req, res) => {
   try {
@@ -332,13 +334,21 @@ const choiceRequest = async (req, res) => {
       const applyUser = await userModel.findById(request.applicantId);
       //Se decide aceptar solicitud buscamos al usuario de la solicitud para ampliar el limite de animales (hasta 3) para evitar abusos.
       applyUser.animalLimit++;
-      await applyUser.save();
 
-      const animal = animalModel.findById(request.animalId);
+      console.log(request.reqAnimalId);
+      const animal = await animalModel.findById(request.reqAnimalId);
+
+      if (!animal) {
+        return res.status(404).json({
+          status: "failed",
+          message: "Animal no encontrado",
+        });
+      }
       animal.status = "adopted";
-      await animal.save();
-
       request.status = "accepted";
+
+      await applyUser.save();
+      await animal.save();
       await request.save();
 
       if (animal.status === "adopted") {
@@ -353,6 +363,8 @@ const choiceRequest = async (req, res) => {
         );
         await emailService.sendEmail(applyUser.email, messageSubject, message);
       }
+      //GENERAMOS CONTRATO PDF - Enviandole los objetos completos:
+      await createAdoptionContract(applyUser, user, animal, requestId);
 
       //Recopilamos todos los request en estado "pending"
       const requests = await requestModel.find({
@@ -375,7 +387,6 @@ const choiceRequest = async (req, res) => {
               animal.name,
               user.name
             );
-
             //Llamamos a nodemailer - Enviando asunto y plantilla
             await emailService.sendEmail(
               request.applicantEmail,
