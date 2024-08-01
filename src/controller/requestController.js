@@ -335,7 +335,6 @@ const choiceRequest = async (req, res) => {
       //Se decide aceptar solicitud buscamos al usuario de la solicitud para ampliar el limite de animales (hasta 3) para evitar abusos.
       applyUser.animalLimit++;
 
-      console.log(request.reqAnimalId);
       const animal = await animalModel.findById(request.reqAnimalId);
 
       if (!animal) {
@@ -344,6 +343,7 @@ const choiceRequest = async (req, res) => {
           message: "Animal no encontrado",
         });
       }
+
       animal.status = "adopted";
       request.status = "accepted";
 
@@ -368,7 +368,7 @@ const choiceRequest = async (req, res) => {
 
       //Recopilamos todos los request en estado "pending"
       const requests = await requestModel.find({
-        reqAnimalId: animalId,
+        reqAnimalId: animal._id,
         status: "pending",
       });
 

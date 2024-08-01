@@ -33,7 +33,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
     //Constante para controlar errores con filesystem
     const stream = fs.createWriteStream(filePath);
 
-    /*                                                     FECHA DEL CONTRATO ---------------------------*/
+    /*                                                 FECHA DEL CONTRATO ---------------------------*/
     const fechaActual = new Date();
     const dia = fechaActual.getDate();
     const mes = fechaActual.getMonth() + 1;
@@ -48,12 +48,18 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
 
     let animalBirth = `${dd}/${mm}/${yyyy}`;
 
-    //                             Fecha Veterinario clausula 11: Calculamos cuando tiene 70 dias (10 semanas)
-    let vetAnimal = new Date(fechaUTC.setDate(fechaUTC.getDate() + 70));
-    let vetAnimalMonth = vetAnimal.getUTCMonth() + 1;
-    let vetAnimalNextMonth = (vetAnimalMonth + 1) % 12;
-    let vetAnimalYear = vetAnimal.getFullYear();
+    //                                        AREA DE CALCULOS DE FECHA CLAUSULA 11: VETERINARIA
 
+    /*  1. Discernir el animal y cuando tiene que acudir al veterinario:
+        Perro: 
+        Gato: 70 días desde el nacimiento
+    */
+    // Transformación de fecha para cláusula 11 - Veterinaria
+    let vetAnimal = new Date(fechaUTC.setDate(fechaUTC.getDate() + 70));
+    let vetAnimalMonthIndex = vetAnimal.getUTCMonth(); // Mes como índice (0-11)
+    let vetAnimalNextMonthIndex = (vetAnimalMonthIndex + 1) % 12; // Mes siguiente, cíclicamente
+
+    //Generamos array de meses
     const meses = [
       "enero",
       "febrero",
@@ -69,11 +75,43 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
       "diciembre",
     ];
 
-    vetAnimalMonth = meses[vetAnimalMonth];
-    vetAnimalNextMonth = meses[vetAnimalNextMonth];
+    //Extraemos meses para la visita clínica del animal
+    let vetAnimalMonth = meses[vetAnimalMonthIndex];
+    let vetAnimalNextMonth = meses[vetAnimalNextMonthIndex];
 
+    //Extraemmos año de la visita
+    let vetAnimalYear = vetAnimal.getFullYear();
+
+    // Solo incrementamos el año si pasamos de diciembre a enero
+    if (vetAnimalMonthIndex === 11 && vetAnimalNextMonthIndex === 0) {
+      vetAnimalYear += 1;
+    }
+    // Generamos la coletilla de la clausula, por defecto, cadena vacía:
+    let clausula11 = "";
+
+    // Y si la fecha veterinaria es posterior a la fecha de contrato corregimos la coletilla, para que lo indique
+    if (vetAnimal.getTime() > fechaActual.getTime()) {
+      clausula11 = `Si el animal no tuviera edad suficiente para poder vacunarlo y ponerle el microchip de manera segura, se realizarán ambos procedimientos cuando tenga aproximadamente 10 semanas, entre el mes de ${vetAnimalMonth} y el mes de ${vetAnimalNextMonth} de ${vetAnimalYear}`;
+    }
+
+    //------ Correcciones de datos:
+    //A. No tiene un ID de la protectora o numero de chip
     if (!animal.numberID) {
       animal.numberID = "(Sin número)";
+    }
+
+    //B. El animal es de especie "Otros" -> Obtenemos sus datos desde breed:
+    if (animal.specie === "Otros") {
+      animal.specie = animal.breed;
+    }
+    if (animal.specie === "Perros") {
+      animal.specie = "Canina";
+    }
+    if (animal.specie === "Gatos") {
+      animal.specie = "Felina";
+    }
+    if (cedente.tipoNIF === "CIF") {
+      cedente.lastname = "";
     }
 
     doc.pipe(stream);
@@ -96,7 +134,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
 
     doc
       .text(
-        `Reunidos, de una parte, ${cedente.name} ${adoptante.lastname} con DNI ${cedente.NIF}, domicilio en ${cedente.address} y teléfono ${cedente.phone}, en adelante denominado como CEDENTE, y de otra parte, ${adoptante.name} ${adoptante.lastname} con DNI ${adoptante.nif}, domicilio en ${adoptante.address} y teléfono ${adoptante.phone}, en adelante denominado como ADOPTANTE, que el ADOPTANTE desea adoptar definitivamente al animal que responde a las siguientes características:`,
+        `Reunidos, de una parte, ${cedente.name} ${adoptante.lastname} con ${cedente.tipoNIF} ${cedente.NIF}, domicilio en ${cedente.address} y teléfono ${cedente.phone}, en adelante denominado como CEDENTE, y de otra parte, ${adoptante.name} ${adoptante.lastname} con ${adoptante.tipoNIF} ${adoptante.nif}, domicilio en ${adoptante.address} y teléfono ${adoptante.phone}, en adelante denominado como ADOPTANTE, que el adoptante desea adoptar definitivamente al animal que responde a las siguientes características:`,
         { align: "justify" }
       )
       .moveDown(1);
@@ -125,8 +163,8 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
       .moveDown(1);
 
     doc
-      .fontSize(14)
-      .font("Helvetica-Bold")
+      .fontSize(12)
+      .font("Helvetica")
       .text(
         "Como adoptante del animal mencionado en este contrato, y declarando que todos los datos anteriores son ciertos, me comprometo mediante la firma de este documento a:",
         { align: "justify" }
@@ -140,7 +178,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
         "1. Aceptar que el responsable designado efectúe las visitas de control que considere necesarias, y compruebe el estado de salud y bienestar del animal.",
         { align: "justify" }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -148,7 +186,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
       .text("2. El animal entregado en adopción no podrá ser utilizado para:", {
         align: "justify",
       })
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -163,9 +201,11 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
       ])
       .moveDown(2);
 
+    doc.addPage();
+
     doc
-      .fontSize(14)
-      .font("Helvetica-Bold")
+      .fontSize(12)
+      .font("Helvetica")
       .text(
         "En ningún caso podrá el animal permanecer atado ni encerrado en jaulas, habitaciones,terrazas, patios o garajes; ni en lugares donde no pueda resguardarse de la lluvia, del frío o del sol, o sin espacio suficiente para el normal desarrollo de su especie.",
         { align: "justify" }
@@ -181,7 +221,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -192,18 +232,18 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
       .font("Helvetica")
       .text(
-        "5. Asimismo, se compromete a no regalar, vender o ceder por cualquier título, al animal; y a no abandonarlo. En caso de no poder atenderlo o ante cualquier circunstancia que produjese la imposibilidad de tener consigo al animal, mantener los términos de este contrato, o deseo de rescindir el mismo, el adoptante se compromete a  mantener al gato hasta encontrar nueva adopción o acogida, en ningún caso se puede devolver el animal al cedente ya que son casas particulares y no disponen de refugio ni protectora.",
+        `5. Asimismo, se compromete a no regalar, vender o ceder por cualquier título, al animal; y a no abandonarlo. En caso de no poder atenderlo o ante cualquier circunstancia que produjese la imposibilidad de tener consigo al animal, mantener los términos de este contrato, o deseo de rescindir el mismo, el adoptante se compromete a  mantener al ${animal.specie} hasta encontrar nueva adopción o acogida, en ningún caso se puede devolver el ${animal.specie} al cedente ya que son casas particulares y no disponen de refugio ni protectora.`,
         {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -214,7 +254,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -222,7 +262,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
       .text("El adoptante se compromete por el presente contrato a:", {
         align: "justify",
       })
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -242,7 +282,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -253,7 +293,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -264,18 +304,18 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
       .font("Helvetica")
       .text(
-        `11. El coste de la adopción del animal será de un total de ${animal.cost} € por los gastos veterinarios (chip, cartilla y vacunación antirrábica), debiendo ser abonados por el adoptante. Si el animal no tuviera edad suficiente para poder vacunarlo y ponerle el microchip de manera segura, se realizarán ambos procedimientos cuando tenga aproximadamente 10 semanas, entre el mes de ${vetAnimalMonth} y el mes de ${vetAnimalNextMonth} de ${vetAnimalYear}`,
+        `11. El coste de la adopción del animal será de un total de ${animal.cost} € por los gastos veterinarios (chip, cartilla y vacunación antirrábica), debiendo ser abonados por el adoptante. ${clausula11}`,
         {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(1);
 
     doc
       .fontSize(12)
@@ -286,25 +326,56 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
           align: "justify",
         }
       )
-      .moveDown(0.5);
+      .moveDown(2);
 
-    doc.fontSize(12).font("Helvetica").text("Firma del Cedente:", 100, doc.y);
-    doc.moveDown(0.5);
-    doc.lineCap("butt").moveTo(100, doc.y).lineTo(300, doc.y).stroke();
-    doc.moveDown(0.5);
-    doc.text(`${cedente.name} (Cedente)`, 100, doc.y);
-    doc.moveDown(2);
+    //Firma cedente:
 
-    doc.text("Firma del Adoptante:", 100, doc.y);
-    doc.moveDown(0.5);
-    doc.lineCap("butt").moveTo(100, doc.y).lineTo(300, doc.y).stroke();
-    doc.moveDown(0.5);
-    doc.text(`${adoptante.name} (Adoptante)`, 100, doc.y);
+    //Guardamos el eje Y actual
+    const initialY = doc.y;
+    doc
+      .fontSize(12)
+      .font("Helvetica")
+      .text(`Firma del Cedente:`, 100, initialY);
+    doc
+      .fontSize(12)
+      .font("Helvetica")
+      .text(`Firma del Adoptante:`, 370, initialY);
+
+    //Al eje Y anterior le metemos un espacio de 20 para la firma
+    const signatureArea = initialY + 100;
+
+    doc
+      .lineCap("butt")
+      .moveTo(100, signatureArea)
+      .lineTo(270, signatureArea)
+      .stroke();
+    doc
+      .lineCap("butt")
+      .moveTo(370, signatureArea)
+      .lineTo(520, signatureArea)
+      .stroke();
+
+    //Al espacio de firma le metemos unos 5 para indicar el nombre
+    const signatureNames = signatureArea + 5;
+    doc.text(
+      `${cedente.name} ${cedente.lastname} (Cedente)`,
+      100,
+      signatureNames
+    );
+    doc.text(
+      `${adoptante.name} (Adoptante) ${cedente.lastname}`,
+      370,
+      signatureNames
+    );
+
+    doc.moveDown(2.5);
 
     // Fecha de firma
-    doc.moveDown(2);
-    doc.text("Fecha:", 100, doc.y);
-    doc.text(`${dia} de ${mes} ${year}`, 150, doc.y);
+    doc.text(`Fecha: ${dia} de ${mes} del ${year}`, 100, doc.y);
+    //IMAGEN
+    doc.image("./src/core/img/SMP-Signature.jpg", 250, 680, {
+      width: 120,
+    });
 
     doc.end();
 
@@ -312,10 +383,14 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
       console.log(
         `Documento contractual ${requestId} generado y guardado en ${filePath}`
       );
+      //Resolvemos la respuesta de la promesa generada al inicio de la función
+      resolve(filePath);
     });
 
     stream.on("error", (error) => {
       console.log(`Error al generar el documento - ${error}`);
+      //Rechazamos la promesa devolviendo el error
+      reject(error);
     });
   });
 }

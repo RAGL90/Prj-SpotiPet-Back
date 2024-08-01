@@ -26,7 +26,7 @@ const sendEmail = async (userEmail, messageSubject, message) => {
         },
       ],
     };
-    // await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
     const time = timeStamp();
     console.log(`${time} Se ha enviado el email a ${userEmail} correctamente`);
   } catch (error) {

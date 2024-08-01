@@ -144,6 +144,24 @@ const userSchema = new Schema({
     unique: true,
     minLength: 9,
   },
+  typeHouse: {
+    type: String,
+    required: false,
+    enum: ["Piso", "Chalet", "Casa", "Otro", "-"],
+    default: "-",
+  },
+  ownHouse: {
+    type: String,
+    required: false,
+    enum: ["Propia", "Alquiler", "-"],
+    default: "-",
+  },
+  //Dispone de jardín vallado
+  gardenWall: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
   //LIMITE DE SOLICITUD DE ADOPCIONES
   animalLimit: {
     type: Number,
@@ -172,8 +190,8 @@ const userSchema = new Schema({
     required: false,
     default: [],
   },
+  //DEFELTED => Solicita eliminación pero tiene animales en la plataforma o tiene adopciones realizadas.
   deletedDate: {
-    //Se rellenará en caso de tener animales en la plataforma o solicitudes aceptadas.
     type: Date,
     required: false,
     default: null,
