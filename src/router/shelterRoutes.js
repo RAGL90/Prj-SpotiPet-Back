@@ -19,6 +19,7 @@ const {
 const {
   getRequests,
   choiceRequest,
+  getContract,
 } = require("../controller/requestController");
 
 //Area sin verificación, crear usuario y login:
@@ -33,7 +34,8 @@ router.delete("/animal", verifyToken, deleteAnimal);
 router.patch("/animal", verifyToken, modifyAnimal);
 
 //CONSULTA y MODIFICACION de SOLICITUDES:
-router.get("/request", verifyToken, getRequests);
+router.get("/requests", verifyToken, getRequests);
+router.get("/request/:requestId", verifyToken, getContract);
 router.patch("/request/:requestId", verifyToken, choiceRequest);
 
 //Modificaciones y eliminaciones del Shelter - TAREA: Falta solventar solicitudes en caso de delete de la protectora.

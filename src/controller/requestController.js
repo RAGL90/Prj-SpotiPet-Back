@@ -38,6 +38,10 @@ const emailService = require("../core/services/emailService");
 //Servicio de PDFKit:
 const createAdoptionContract = require("../core/services/generatorPDF");
 
+//Servicios de lectura y manejo de archivos para: getContract()
+const fs = require("fs");
+const path = require("path");
+
 const createRequest = async (req, res) => {
   try {
     //Filtro 1. ¿Está logueado?
@@ -446,4 +450,78 @@ const choiceRequest = async (req, res) => {
   }
 };
 
-module.exports = { createRequest, getRequests, choiceRequest };
+const getContract = async (req, res) => {
+  try {
+    //1º Revisamos Logueo:
+    if (!req.user) {
+      return res.status(401).json({
+        status: "failed",
+        message: "Debe iniciar sesión para esta solicitud",
+      });
+    }
+
+    //2º Extraemos quien es por el payload, según el dato aportado.
+    const { shelterId, userId } = req.user;
+
+    //3º Con el ternario clasificamos cual de los dos tipos de usuario es:
+    const userType = shelterId ? "shelter" : "user";
+
+    //4º Con user Recopilamos los datos en funcion del tipo de usuario.
+    const user =
+      userType === "shelter"
+        ? await shelterModel.findById(shelterId)
+        : await userModel.findById(userId);
+
+    //5º Si no encontramos usuario, se saca del sistema.
+    if (!user) {
+      return res.status(401).json({
+        status: "failed",
+        message: "Usuario no registrado",
+      });
+    }
+
+    //6º Recogemos que ID del contrato es la que busca.
+    const requestId = req.params.requestId;
+    const request = await requestModel.findById(requestId);
+
+    //7º Si el usuario no es ni el adoptante ni el creador del animal, lo echamos de aquí
+    if (!user._id === request.applicantId || !user._id === request.transferId) {
+      return res.status(401).json({
+        status: "failed",
+        message: "Usuario identificado sin permiso para hacer esta solicitud",
+      });
+    }
+
+    //8º Buscamos el pdf indicado:
+    const filePath = path.resolve(__dirname, `../contracts/${requestId}.pdf`);
+
+    //9º Comprobación de que el archivo exista:
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        status: "failed",
+        message: "archivo no localizado, lamentamos las molestias",
+      });
+    }
+
+    //10º Preparamos el header indicando que tipo de archivo vamos a enviar:
+    res.setHeader("Content-Type", "application/pdf");
+
+    //11º Configuramos el "adjunto"
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${requestId}.pdf`
+    );
+
+    //11º Crear una red stream  y enviar el archivo:
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    return res.status(500).json({
+      status: "failed",
+      message: "Imposible cumplir la solicitud",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { createRequest, getRequests, choiceRequest, getContract };

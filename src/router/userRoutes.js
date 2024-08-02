@@ -12,7 +12,10 @@ const {
   modifyAnimal,
   deleteAnimal,
 } = require("../controller/userController");
-const { createRequest } = require("../controller/requestController");
+const {
+  createRequest,
+  getContract,
+} = require("../controller/requestController");
 
 //Zona de rutas para usuarios sin registros ni autenticación
 router.get("/", getUser);
@@ -29,6 +32,7 @@ router.patch("/animal", verifyToken, modifyAnimal);
 router.delete("/animal", verifyToken, deleteAnimal);
 
 //Zona de rutas para solicitudes:
+router.get("/request/:requestId", verifyToken, getContract);
 router.post("/request/:animalId", verifyToken, createRequest);
 
 module.exports = router;
