@@ -116,12 +116,18 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
 
     doc.pipe(stream);
 
+    //IMAGEN
+    doc.image("./src/core/img/SMP-Signature.jpg", 250, 30, {
+      width: 120,
+    });
+    doc.moveDown(5);
+
     // Título del documento
     doc
       .fontSize(18)
       .font("Helvetica-Bold")
       .text("CONTRATO DE ADOPCIÓN", { align: "center" })
-      .moveDown(2);
+      .moveDown(1);
 
     // Introducción
     doc
@@ -153,7 +159,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
         `Signos particulares: ${animal.physicFeatures}`,
         `Nº de identificación: ${animal.numberID}`,
       ])
-      .moveDown(2);
+      .moveDown(1.5);
 
     // Cláusulas del contrato
     doc
@@ -372,10 +378,6 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
 
     // Fecha de firma
     doc.text(`Fecha: ${dia} de ${mes} del ${year}`, 100, doc.y);
-    //IMAGEN
-    doc.image("./src/core/img/SMP-Signature.jpg", 250, 680, {
-      width: 120,
-    });
 
     doc.end();
 

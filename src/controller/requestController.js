@@ -32,6 +32,7 @@ const timeStamp = require("../core/utils/timeStamp");
 //Servicios de email:
 const userInfoAnotherAdoptedPet = require("../core/services/messages/userInfoAnotherAdoptedPet");
 const userInfoGrantedAdoption = require("../core/services/messages/userInfoGrantedAdoption");
+const userInfoRefusedRequest = require("../core/services/messages/userInfoRefusedRequest");
 const emailService = require("../core/services/emailService");
 
 //Servicio de PDFKit:
@@ -329,13 +330,12 @@ const choiceRequest = async (req, res) => {
     }
 
     const { choice, description } = req.body;
+    const applyUser = await userModel.findById(request.applicantId);
+    const animal = await animalModel.findById(request.reqAnimalId);
 
     if (choice === "accepted") {
-      const applyUser = await userModel.findById(request.applicantId);
-      //Se decide aceptar solicitud buscamos al usuario de la solicitud para ampliar el limite de animales (hasta 3) para evitar abusos.
+      //Se decide aceptar solicitud buscamos al usuario de la solicitud para ampliar el limite de animales (hasta 3) para evitar posibles abusos del usuario.
       applyUser.animalLimit++;
-
-      const animal = await animalModel.findById(request.reqAnimalId);
 
       if (!animal) {
         return res.status(404).json({
@@ -404,8 +404,9 @@ const choiceRequest = async (req, res) => {
 
       /* 
       Si la solicitud se acepta, rechazamos todas las demás solicitudes para el mismo animal.
-      usamos el updateMany de Mongoose indicando como filtro el id del animal y todas aquellas solicitudes en estado "Pending".
-      Modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo.
+      
+      Con updateMany de Mongoose y filtrando el id del animal localizamos todas aquellas solicitudes del animal en estado "Pending".
+      Modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo y se lanza el email
       */
 
       await requestModel.updateMany(
@@ -419,12 +420,19 @@ const choiceRequest = async (req, res) => {
         }
       );
     } else {
+      //La solicitud se ha rechazado por el propietario:
       request.status = "refused";
       request.refusedDescr = description; //Motivos de negación de la solicitud (si la protectora quiere expresarlo)
       await request.save();
-      //FALTA PLANTILLA DE EMAIL!
-    }
 
+      const messageSubject = `Spot My Pet 🐾 - Actualización sobre tu solicitud de adopción de ${animal.name}`;
+      const message = await userInfoRefusedRequest(
+        applyUser.name,
+        animal.name,
+        request.refusedDescr
+      );
+      await emailService.sendEmail(applyUser.email, messageSubject, message);
+    }
     return res.status(200).json({
       status: "success",
       message: `Declarado el nuevo estado de la solicitud a ${choice}`,
