@@ -1,3 +1,4 @@
+//Recogemos model de Animal
 const animalModel = require("../models/animalModel");
 
 //LECTURA DEL ANIMAL - ESTA SERÁ LA CONSULTA DE LOS ANIMALES Y NO REQUIERE DE REGISTRO DE USUARIO:
