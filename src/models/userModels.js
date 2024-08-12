@@ -130,10 +130,6 @@ const userSchema = new Schema({
     type: String,
     required: false,
   },
-  birthdate: {
-    type: Date,
-    required: false,
-  },
   phone: {
     type: String,
     required: false,
@@ -190,7 +186,7 @@ const userSchema = new Schema({
     required: false,
     default: [],
   },
-  //DEFELTED => Solicita eliminación pero tiene animales en la plataforma o tiene adopciones realizadas.
+  //DELETED => Solicita eliminación pero tiene animales en la plataforma o tiene adopciones realizadas.
   deletedDate: {
     type: Date,
     required: false,

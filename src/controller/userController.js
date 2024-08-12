@@ -82,7 +82,7 @@ const signup = async (req, res) => {
         //Declaración de parámetros Nodemailer
         const messageSubject = `¡Gracias por registrarte en Spot My Pet ${newUser.username}! 🐾`;
         //Como llamamos a una función y estamos en un async DEBEMOS incluir await
-        const message = await userRegisterMail(newUser.username);
+        const message = await userRegisterMail(newUser.name);
 
         //Envío del mensaje
         await emailService.sendEmail(newUser.email, messageSubject, message);
