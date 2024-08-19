@@ -50,4 +50,35 @@ const getAnimals = async (req, res) => {
   }
 };
 
+const getAnimalId = async (req, res) => {
+  try {
+    if (!req.params.animalId) {
+      return res.status(404).json({
+        status: "failed",
+        message: "ID del animal no facilitada",
+      });
+    }
+    const animalId = req.params.animalId;
+    const animal = await animalModel.findById(animalId);
+
+    if (!animal) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Animal no localizado, revise la ID del animal proporcionado",
+      });
+    }
+    res.json({
+      status: "succeeded",
+      data: animal,
+      error: null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido leer los datos del animal",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = { getAnimals };
