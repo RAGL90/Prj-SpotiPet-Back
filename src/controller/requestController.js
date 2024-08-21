@@ -222,7 +222,7 @@ const createRequest = async (req, res) => {
       `${time} Solicitud de ${applicantUser.name} para ${animal.name}, propietario: ${transfer.name}`
     );
 
-    //EMAIL SERVICE Y CREACION DE PDF
+    //EMAIL SERVICE
 
     res.status(201).json({
       status: "succeed",
@@ -281,6 +281,12 @@ const getRequests = async (req, res) => {
       Esto mejora el rendimiento:
       Si la protectora tiene 10 solicitudes no notaría la diferencia, pero si tiene 500 solicitudes, el tiempo de espera es bastante notable.
     */
+    if (!arrayRequest) {
+      return res.status(404).json({
+        status: "failed",
+        message: "No existen solicitudes de adopcion",
+      });
+    }
     return res.status(200).json({
       status: "success",
       data: arrayRequest,
@@ -292,6 +298,49 @@ const getRequests = async (req, res) => {
     return res.status(500).json({
       status: "failed",
       message: "Error en la operación de búsqueda de solicitudes",
+      error: error.message,
+    });
+  }
+};
+
+const userReadRequest = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Usuario no identificado, por favor, inicie sesión",
+      });
+    }
+
+    if (!user.applications || user.applications.length === 0) {
+      return res.status(404).json({
+        status: "failed",
+        message: "No has realizado ninguna solicitud de adopción",
+      });
+    }
+
+    const arrayApplicationToPromise = user.applications.map((requestId) =>
+      requestModel.findById(requestId)
+    );
+    const arrayApplications = await Promise.all(arrayApplicationToPromise);
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const total = arrayApplications.length;
+    const pages = Math.ceil(total / limit);
+
+    return res.status(200).json({
+      status: "success",
+      data: arrayApplications.slice((page - 1) * limit, page * limit),
+      page,
+      pages,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "failed",
+      message: "Error en la operación de búsqueda de solicitudes del usuario",
       error: error.message,
     });
   }
@@ -533,4 +582,10 @@ const getContract = async (req, res) => {
   }
 };
 
-module.exports = { createRequest, getRequests, choiceRequest, getContract };
+module.exports = {
+  createRequest,
+  getRequests,
+  choiceRequest,
+  getContract,
+  userReadRequest,
+};
