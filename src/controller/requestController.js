@@ -65,6 +65,8 @@ const createRequest = async (req, res) => {
     }
     //Filtro 3. ¿El animal está disponible?
     if (animal.status != "available") {
+      console.log(animal.status);
+
       return res.status(403).json({
         status: "failed",
         message: "Animal ya adoptado, imposible generar solicitud",
@@ -154,6 +156,13 @@ const createRequest = async (req, res) => {
       });
     }
 
+    if (applicantUser._id == animal.owner.ownerId) {
+      return res.status(400).json({
+        status: "failed",
+        message: "El adoptante no puede ser el mismo que el cedente",
+      });
+    }
+
     //El usuario ha pasado todos los controles => RECOGEMOS DATOS DEL .owner DEL ANIMAL:
     actualOwnerId = animal.owner.ownerId; //Extraemos ID
 
@@ -199,6 +208,8 @@ const createRequest = async (req, res) => {
       transferProvince: transfer.province,
       transferLocality: transfer.locality,
     });
+
+    console.log(applicantNIF);
 
     await newRequest.save();
 
