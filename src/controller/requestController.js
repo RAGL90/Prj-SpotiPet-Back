@@ -209,8 +209,6 @@ const createRequest = async (req, res) => {
       transferLocality: transfer.locality,
     });
 
-    console.log(applicantNIF);
-
     await newRequest.save();
 
     transfer.requests.push(newRequest._id); //Se introduce ID de la solicitud en Solicitudes Recibidas
