@@ -133,23 +133,25 @@ const signup = async (req, res) => {
   }
 };
 
-//-----------------------------------------OBTENCIÓN DE USUARIOS PARA ADMIN, falta añadir control admin
-const getUser = async (req, res) => {
-  try {
-    const users = await userModel.find();
-    res.status(200).json({
-      status: "success",
-      users,
-      error: null,
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: "failed",
-      users: null,
-      error: error.message,
-    });
-  }
-};
+//-----------------------------------------OBTENCIÓN DE USUARIOS PARA ADMIN
+//falta añadir control admin
+
+// const getUser = async (req, res) => {
+//   try {
+//     const users = await userModel.find();
+//     res.status(200).json({
+//       status: "success",
+//       users,
+//       error: null,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       status: "failed",
+//       users: null,
+//       error: error.message,
+//     });
+//   }
+// };
 
 //----------------------------------------- LOGUEO Y VERIFICACION DE USUARIO
 const login = async (req, res) => {
@@ -770,12 +772,62 @@ const modifyAnimal = async (req, res) => {
   }
 };
 
+const userAnimals = async (req, res) => {
+  try {
+    const { userId, email, userType, name } = req.user;
+
+    if (!userId) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Sin autorización, por favor inicie sesión",
+      });
+    }
+
+    const user = await userModel.findById(userId);
+
+    if (!userId) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Usuario no localizado",
+      });
+    }
+
+    //Creamos array userAnimals para recoger los datos de animales de cada usuario
+    let userAnimals = [];
+
+    for (let animals of user.animalsCreated) {
+      //Introducimos todos los datos de cada animal encontrado.
+      let animalFound = await animalModel.findById(animals);
+      userAnimals.push(animalFound);
+    }
+
+    if (userAnimals.length === 0) {
+      //Si el array del usuario está vacío, es correcto no daremos un error pero si un mensaje
+      return res.status(200).json({
+        status: "succeeded",
+        data: "Sin animales que mostrar",
+      });
+    }
+    return res.status(200).json({
+      status: "succeeded",
+      data: userAnimals,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido leer los datos del animal",
+      error: error.message,
+    });
+  }
+};
+
+//getUser - A la espera
 module.exports = {
   signup,
   login,
-  getUser,
   modifyUser,
   deleteUser,
+  userAnimals,
   createAnimal,
   modifyAnimal,
   deleteAnimal,

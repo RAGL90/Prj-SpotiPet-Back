@@ -1,5 +1,6 @@
 //Recogemos model de Animal
 const animalModel = require("../models/animalModel");
+const userModel = require("../models/userModels");
 
 //LECTURA DEL ANIMAL - ESTA SERÁ LA CONSULTA DE LOS ANIMALES Y NO REQUIERE DE REGISTRO DE USUARIO:
 const getAnimals = async (req, res) => {
@@ -81,4 +82,4 @@ const getAnimalId = async (req, res) => {
   }
 };
 
-module.exports = { getAnimals };
+module.exports = { getAnimals, getAnimalId };

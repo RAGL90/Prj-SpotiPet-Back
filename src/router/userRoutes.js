@@ -4,10 +4,11 @@ const { verifyToken } = require("../core/middleware/auth/middle");
 
 const {
   signup,
-  getUser,
+  // getUser,
   login,
   modifyUser,
   deleteUser,
+  userAnimals,
   createAnimal,
   modifyAnimal,
   deleteAnimal,
@@ -19,8 +20,8 @@ const {
   userReadRequest,
 } = require("../controller/requestController");
 
+// router.get("/", getUser);
 //Zona de rutas para usuarios sin registros ni autenticación
-router.get("/", getUser);
 router.post("/signup", signup);
 router.post("/login", login);
 
@@ -29,6 +30,7 @@ router.patch("/user-panel", verifyToken, modifyUser);
 router.delete("/user-panel", verifyToken, deleteUser);
 
 //Zona de rutas para animales subidos:
+router.get("/animal", verifyToken, userAnimals);
 router.post("/animal", verifyToken, createAnimal);
 router.patch("/animal", verifyToken, modifyAnimal);
 router.delete("/animal", verifyToken, deleteAnimal);
