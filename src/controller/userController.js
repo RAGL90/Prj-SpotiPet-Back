@@ -449,9 +449,13 @@ const createAnimal = async (req, res) => {
       //Le restamos 1 al mes porque empieza en 0
       birthDateFormated = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
     }
-    // Extraemos datos del creador con el payload
+
+    // Extraemos datos del usuario que crea el animal con el payload
     // Renombramos name del payload para evitar conflictos con name del animal que se va a crear
     const { userId, email, userType, name: ownerName } = req.user;
+
+    //Buscamos la ficha del usuario y la guardamos:
+    let user = await userModel.findById(userId);
 
     //Si el animal es un Perro es NECESARIO indicar el tamaño.
     if (specie === "Perros" && !size) {
@@ -461,6 +465,8 @@ const createAnimal = async (req, res) => {
         error: "Tamaño no especificado, es necesario para registrar al perro",
       });
     }
+
+    //Generamos la fecha de creación:
     const registerDate = new Date();
 
     //CREACION de ANIMAL
@@ -477,25 +483,24 @@ const createAnimal = async (req, res) => {
       physicFeatures,
       mainColor,
       description,
+      location: user.province,
       photo,
       urgent,
       owner: {
         ownerId: userId,
         ownerType: userType,
-        ownerName,
+        ownerName: user.name,
       },
       adopted,
     });
 
-    //Modificamos la ficha del usuario para que en su panel se observe el estado del nuevo animal registrado
-    let user = await userModel.findById(userId);
-    if (user.animalsCreated < 3) {
-      //Guardamos nuestra mascota
+    if (user.animalsCreated.length < 3) {
       await newAnimal.save();
       user.animalsCreated.push(newAnimal._id);
+      //Guardamos la mascota en la ficha del usuario como array
 
       await user.save();
-      //Informamos del cambio en la BBDD
+      //Informamos del cambio en la BBDD a la consola:
       const time = timeStamp();
       console.log(
         `${time} Nueva mascota: ${newAnimal.name} , tipo ${newAnimal.specie} - Creado correctamente`
@@ -505,6 +510,7 @@ const createAnimal = async (req, res) => {
       res.status(200).json({
         status: "success",
         message: `La mascota ${newAnimal.name} está creada correctamente`,
+        animalId: newAnimal._id,
         error: null,
       });
 
@@ -532,21 +538,22 @@ const createAnimal = async (req, res) => {
       const message = await newPetRegisterU(
         newAnimal.name,
         newAnimal.specie,
-        user.animalLimit
+        user.animalLimit.length
       );
 
       await emailService.sendEmail(user.email, messageSubject, message);
       //Finaliza el registro
       return;
     } else {
-      res.status(401).json({
+      res.status(403).json({
         status: "failed",
         message: "No puedes subir más de 3 animales",
         error: "User animal creation restrincted",
       });
+
       const time = timeStamp();
       console.log(
-        `${time} El usuario ${user.username} con email: ${user.email} ha superado el límite de subida de animales`
+        `${time} El usuario ${user.name} con email: ${user.email} ha superado el límite de subida de animales`
       );
       return;
     }

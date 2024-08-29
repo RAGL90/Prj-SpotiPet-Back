@@ -21,7 +21,7 @@ const animalSchema = new Schema({
   },
   size: {
     type: String,
-    enum: ["Grande", "Mediano", "Pequeño"],
+    enum: ["Grande", "Mediano", "Pequeño", ""],
     required: false,
     index: true, //Para consultas que necesiten un filtrar el tamaño del perro
   },
@@ -72,6 +72,10 @@ const animalSchema = new Schema({
     type: String,
     required: false,
     default: false,
+  },
+  location: {
+    type: String,
+    required: false,
   },
   cost: {
     type: Number,
