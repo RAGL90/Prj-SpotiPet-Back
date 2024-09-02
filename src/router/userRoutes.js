@@ -4,7 +4,7 @@ const { verifyToken } = require("../core/middleware/auth/middle");
 
 const {
   signup,
-  // getUser,
+  getUser,
   login,
   modifyUser,
   deleteUser,
@@ -26,6 +26,7 @@ router.post("/signup", signup);
 router.post("/login", login);
 
 //Zona de rutas perfil usuario:
+router.get("/user-panel", verifyToken, getUser);
 router.patch("/user-panel", verifyToken, modifyUser);
 router.delete("/user-panel", verifyToken, deleteUser);
 

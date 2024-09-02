@@ -139,22 +139,56 @@ const signup = async (req, res) => {
 //-----------------------------------------OBTENCIÓN DE USUARIOS PARA ADMIN
 //falta añadir control admin
 
-// const getUser = async (req, res) => {
-//   try {
-//     const users = await userModel.find();
-//     res.status(200).json({
-//       status: "success",
-//       users,
-//       error: null,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       status: "failed",
-//       users: null,
-//       error: error.message,
-//     });
-//   }
-// };
+const getUser = async (req, res) => {
+  try {
+    // 1º Revisamos que traiga el token de verify
+    if (!req.user) {
+      return res.status(401).json({
+        status: "failed",
+        message: "Inicie sesión para acceder al usuario",
+      });
+    }
+    const { userId, email, userType, name } = req.user;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: "failed",
+        message: "No está autorizado para ver el perfil",
+      });
+    }
+
+    const user = await userModel.findById(userId);
+
+    if (!user || user.type === "deletedUser") {
+      /*
+      Recordamos que si el usuario esta clasificado como "deletedUser" implica está eliminado
+      Pero no se han borrados sus datos por motivos de seguridad para evitar abusos:
+        · Alcanzar el limite de mascotas creadas y que todas sean adoptadas
+            Borrar y crear nuevo perfil.
+      
+        No obstante se hace un borrado de la mayoría de datos y se clasifica como deletedUser
+      
+      Si el usuario intenta loguear tras ordenar su borrado, le daremos indicación de que no existe.
+      (Pero no podrá crearse otro perfil)
+      */
+      return res.status(404).json({
+        status: "failed",
+        message: "El usuario indicado no existe",
+      });
+    }
+    res.status(200).json({
+      status: "succeeded",
+      data: user,
+      error: null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      users: null,
+      error: error.message,
+    });
+  }
+};
 
 //----------------------------------------- LOGUEO Y VERIFICACION DE USUARIO
 const login = async (req, res) => {
@@ -860,6 +894,7 @@ const userAnimals = async (req, res) => {
 module.exports = {
   signup,
   login,
+  getUser,
   modifyUser,
   deleteUser,
   userAnimals,
