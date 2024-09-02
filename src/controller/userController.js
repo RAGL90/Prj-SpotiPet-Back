@@ -8,6 +8,9 @@ const generateToken = require("../core/middleware/auth/auth");
 const NIFverifier = require("../core/utils/NIFverifier");
 const timeStamp = require("../core/utils/timeStamp");
 const bcrypt = require("bcrypt");
+// Bibliotecas para editar archivos en el sistema:
+const path = require("path");
+const fs = require("fs");
 //  Servicio de Email:
 const emailService = require("../core/services/emailService");
 const userRegisterMail = require("../core/services/messages/signedUpUser");
@@ -655,6 +658,30 @@ const deleteAnimal = async (req, res) => {
       );
 
       await animalModel.findByIdAndDelete(animalId);
+
+      //3º Procedemos a borrar sus imágenes en el sistema
+      const dirPath = path.join(
+        __dirname,
+        `../public/animals/uploads/${animalId}`
+      );
+      //Comprobamos existencia del directorio:
+      if (fs.existsSync(dirPath)) {
+        //Existe => Ejecutamos borrado con forzado y recursividad
+        fs.rm(dirPath, { recursive: true, force: true }, (err) => {
+          if (err) {
+            console.log(
+              `Mascota ${animalId} borrado del sistema, problemas para borrar las imágenes - REVISAR `
+            );
+
+            return res.status(500).json({
+              status: "failed",
+              message:
+                "Eliminado registro de BBDD, sin embargo las imagenes persisten en el sistema",
+              error: err.message,
+            });
+          }
+        });
+      }
 
       //Informamos en consola
       const time = timeStamp();
