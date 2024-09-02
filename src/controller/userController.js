@@ -748,6 +748,7 @@ const modifyAnimal = async (req, res) => {
       animal.mainColor = newAnimalData.mainColor || animal.mainColor;
       animal.description = newAnimalData.description || animal.description;
       animal.urgent = newAnimalData.urgent || animal.urgent;
+      animal.photo = newAnimalData.photo || animal.photo;
 
       await animal.save(); // Guardamos cambios
       const time = timeStamp();

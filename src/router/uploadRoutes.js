@@ -131,7 +131,6 @@ router.post("/:animalId", verifyToken, async (req, res) => {
         error: "Ingrese sesion e intentelo de nuevo",
       });
     }
-    //3.2 - Se obtiene Identificador => 4ª Validación
 
     //4.1 - La peticion pertenece al propietario => OK, pasamos a multer
     if (userId === animal.owner.ownerId || shelterId === animal.owner.ownerId) {
