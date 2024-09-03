@@ -157,7 +157,11 @@ const getUser = async (req, res) => {
       });
     }
 
-    const user = await userModel.findById(userId);
+    let user = await userModel.findById(
+      userId,
+      //Eliminamos datos sensibles y de funcion interna del objeto user:
+      "-pswd -pswdCode -userType -registerDate -deletedDate"
+    );
 
     if (!user || user.type === "deletedUser") {
       /*
