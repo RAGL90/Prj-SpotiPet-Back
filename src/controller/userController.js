@@ -290,17 +290,29 @@ const modifyUser = async (req, res) => {
     }
 
     const newUserData = req.body;
-    if (newUserData.NIF && newUserData.tipoNIF) {
-      const control = NIFverifier(tipoNIF, newUserData.NIF);
-      if (!control.valid) {
-        //Si el objeto control indica un error, se le pasará una respuesta presentando como error la causa de invalidación
-        return res.status(400).json({
+    // Revisar si alguno de los valores de NIF ha cambiado antes de verificar
+    if (newUserData.NIF !== user.NIF || newUserData.tipoNIF !== user.tipoNIF) {
+      // Asegúrate de extraer tipoNIF de newUserData
+      const { tipoNIF, NIF } = newUserData;
+
+      try {
+        const control = NIFverifier(tipoNIF, NIF);
+        if (!control.valid) {
+          return res.status(400).json({
+            status: "failed",
+            message: control.invalidCause,
+          });
+        }
+      } catch (error) {
+        console.error("Error al verificar NIF:", error);
+        return res.status(500).json({
           status: "failed",
-          message: control.invalidCause,
+          message: "Error interno al verificar el NIF",
+          error: error.message,
         });
       }
     }
-    //ACTUALIZAMOS user.birth SOLO SI ES INDICADO, PARA ELLO LO FORMATEAMOS UTC
+    //Actualizamos solo si user.birth está indicado. En cuyo caso convertiremos la fecha en UTC para Mongoose
     if (newUserData.birth) {
       // 0123456789
       //El usuario introduce la fecha en formato ES, ej => 31/12/2024
@@ -314,22 +326,27 @@ const modifyUser = async (req, res) => {
       console.log(user.birth);
     }
 
-    // Actualiza los campos solo si se proporcionan en newUserData
+    // Actualiza los campos solo si se proporcionan nuevos datos en newUserData
     user.email = newUserData.email || user.email;
+    user.tipoNIF = newUserData.tipoNIF || user.tipoNIF;
+    user.NIF = newUserData.NIF || user.NIF;
     user.name = newUserData.name || user.name;
     user.lastname = newUserData.lastname || user.lastname;
-    user.age = newUserData.age || user.age;
     user.province = newUserData.province || user.province;
     user.locality = newUserData.locality || user.locality;
     user.address = newUserData.address || user.address;
     user.phone = newUserData.phone || user.phone;
+    user.typeHouse = newUserData.typeHouse || user.typeHouse;
+    user.ownHouse = newUserData.ownHouse || user.ownHouse;
+    user.gardenWall = newUserData.gardenWall || user.gardenWall;
 
     if (
       newUserData.userType ||
       newUserData.animalLimit ||
       newUserData.animalsCreated
     ) {
-      //Si trata de modificar el tipo de usuario, su limite de adopciones, o la cantidad en adopción
+      //Si trata de modificar el tipo de usuario, su limite de adopciones, o la cantidad en adopción será rechazado
+      //(Estaría además forzando estos datos desde fuera de la app de react-next)
       return res.status(401).json({
         status: "failed",
         message: "Petición no autorizada",
@@ -382,7 +399,7 @@ const deleteUser = async (req, res) => {
       status: { $in: ["pending", "refused"] },
     });
 
-    if (userData.animalLimit != 0 || userData.createAnimal != 0) {
+    if (userData.animalLimit != 0 || userData.animalsCreated.length != 0) {
       //Si uno de estos parámetros está alterado, el usuario ha creado o adoptado un animal
 
       userData.pswd = "userDeleted-000";
@@ -409,20 +426,22 @@ const deleteUser = async (req, res) => {
           Debido a su actividad en la plataforma se han reservado datos mínimos para garantizar la seguridad de los animales
           * Los datos que se han mantenido son: Email, NIF y solicitudes de adopciones aceptadas.
           
-          Garantizamos que el email no será utilizado para ningún tipo de contacto.
+          Garantizamos que tu email no será utilizado para ningún tipo de contacto por nuestra parte (SpotMyPet),
+          pero es posible que pueda haber contacto por parte de la protectora por cuestiones acerca del animal adoptado.
+          O de usuarios que hayas cedido el animal
 
-          Pasado un tiempo prudencial serán eliminados los datos
+          Pasado un tiempo prudencial serán eliminados estos datos.
           `,
         error: null,
       });
     } else {
       //En caso de que no haya ningun animal subido, boraremos inmediatamente sus datos:
-      await userModel.findByIdAndDelete(userId);
 
       const time = timeStamp();
       console.log(
         `${time} usuario ${userData.username} eliminado correctamente`
       );
+      await userModel.findByIdAndDelete(userId);
 
       return res.status(200).json({
         status: "success",
