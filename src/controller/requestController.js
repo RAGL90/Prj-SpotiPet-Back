@@ -396,7 +396,7 @@ const choiceRequest = async (req, res) => {
     const animal = await animalModel.findById(request.reqAnimalId);
 
     if (choice === "accepted") {
-      //Se decide aceptar solicitud buscamos al usuario de la solicitud para ampliar el limite de animales (hasta 3) para evitar posibles abusos del usuario.
+      //Se decide aceptar solicitud buscamos al usuario de la solicitud para sumar en 1 el limite de animales (hasta 3).
       applyUser.animalLimit++;
 
       if (!animal) {
@@ -414,7 +414,7 @@ const choiceRequest = async (req, res) => {
       await request.save();
 
       if (animal.status === "adopted") {
-        //Abrimos este if solo para sacar del scope las mismas const declaradas abajo en el email.
+        //Abrimos este if para sacar del scope las mismas constantes que serán declaradas abajo en el email y no provocar conflictos.
         const messageSubject = `Spot My Pet 🐾 - ¡Felicidades! ¡Has sido seleccionado para adoptar a  ${animal.name}! 😄`;
         const message = await userInfoGrantedAdoption(
           applyUser.name,

@@ -17,6 +17,7 @@ const {
 const {
   createRequest,
   getContract,
+  choiceRequest,
   userReadRequest,
 } = require("../controller/requestController");
 
@@ -39,6 +40,7 @@ router.delete("/animal", verifyToken, deleteAnimal);
 //Zona de rutas para solicitudes:
 router.get("/request/", verifyToken, userReadRequest);
 router.get("/request/:requestId", verifyToken, getContract);
+router.patch("/request/:requestId", verifyToken, choiceRequest);
 router.post("/request/:animalId", verifyToken, createRequest);
 
 module.exports = router;
