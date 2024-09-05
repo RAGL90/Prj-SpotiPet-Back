@@ -575,9 +575,67 @@ const modifyAnimal = async (req, res) => {
   }
 };
 
+//Obtener Info de los datos de Shelter
+const getShelter = async (req, res) => {
+  try {
+    // 1º Revisamos que traiga el token de verify
+    if (!req.user) {
+      return res.status(401).json({
+        status: "failed",
+        message: "Inicie sesión para acceder al usuario",
+      });
+    }
+    const { shelterId, email, userType, name } = req.user;
+
+    if (!shelterId) {
+      return res.status(401).json({
+        status: "failed",
+        message: "No está autorizado para ver el perfil",
+      });
+    }
+
+    let shelter = await shelterModel.findById(
+      shelterId,
+      //Eliminamos datos sensibles y de funcion interna del objeto shelter (HAY QUE AÑADIR AL MODELO -pswdCode -registerDate -deletedDate)
+      "-pswd"
+    );
+
+    if (!shelter) {
+      /*
+      Recordamos que si el usuario esta clasificado como "deletedUser" implica está eliminado
+      Pero no se han borrados sus datos por motivos de seguridad para evitar abusos:
+        · Alcanzar el limite de mascotas creadas y que todas sean adoptadas
+            Borrar y crear nuevo perfil.
+      
+        No obstante se hace un borrado de la mayoría de datos y se clasifica como deletedUser
+      
+      Si el usuario intenta loguear tras ordenar su borrado, le daremos indicación de que no existe.
+      (Pero no podrá crearse otro perfil)
+      */
+      return res.status(404).json({
+        status: "failed",
+        message:
+          "La protectora indicada no existe, o no se encuentra disponible, contactar con administración de la plataforma",
+      });
+    }
+    res.status(200).json({
+      status: "succeeded",
+      data: shelter,
+      error: null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   signUpShelter,
   shelterLogin,
+  getShelter,
   modifyShelter,
   deleteShelter,
   createAnimal,

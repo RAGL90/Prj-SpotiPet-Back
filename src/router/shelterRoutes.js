@@ -9,6 +9,7 @@ const { verifyToken } = require("../core/middleware/auth/middle");
 const {
   signUpShelter,
   shelterLogin,
+  getShelter,
   modifyShelter,
   deleteShelter,
   createAnimal,
@@ -39,6 +40,7 @@ router.get("/request/:requestId", verifyToken, getContract);
 router.patch("/request/:requestId", verifyToken, choiceRequest);
 
 //Modificaciones y eliminaciones del Shelter - TAREA: Falta solventar solicitudes en caso de delete de la protectora.
+router.get("/panel", verifyToken, getShelter);
 router.patch("/panel/:id", verifyToken, modifyShelter);
 router.delete("/panel/:id", verifyToken, deleteShelter);
 
