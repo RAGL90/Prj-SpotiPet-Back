@@ -121,7 +121,7 @@ const createRequest = async (req, res) => {
     const age = Math.floor(ageDiff / (365.25 * 24 * 60 * 60 * 1000));
     /*
         Explicación de fórmula:
-        365.25 => No es 365, porque se tiene en cuanta los años bisiestos (1 cada 4 años = 1 / 4 = 0.25)
+        365.25 => No es 365, porque se tiene en cuenta los años bisiestos (1 cada 4 años => 1 / 4 = 0.25)
         24 (horas que tiene cada día)
         60 (minutos que tiene cada hora)
         60 (segundos que tiene cada minuto)
@@ -240,27 +240,16 @@ const createRequest = async (req, res) => {
 
 //-----------------CONSULTA DE SOLICITUDES - PROTECTORA
 const getRequests = async (req, res) => {
-  //Preestablecemos la vista, a menos que se indique lo contrario.
-  let { page, limit } = req.query;
-
-  page = parseInt(page) || 1; // Si no se indica, default: 1
-  limit = parseInt(limit) || 20; // default: 20
-  limit = limit > 50 ? 50 : limit; //Ternario para no hacer una consulta enorme en el endpoint
+  let { page = 1, limit = 20, status } = req.query;
+  limit = Math.min(limit, 50); // Límite máximo de 50 para evitar consultas masivas
 
   try {
     const { shelterId, userId } = req.user; //El payload traerá uno de estos campos
     const userType = shelterId ? "shelter" : "user"; //Con el ternario filtramos las dos situaciones usuario con puesta de adopcion o protectora
-
     const user =
       userType === "shelter"
         ? await shelterModel.findById(shelterId)
         : await userModel.findById(userId);
-
-    // Contar el número total de solicitudes
-    const total = await requestModel.countDocuments({
-      _id: { $in: user.requests },
-      //Contar número de documentos en los que en el ID se encuentren las solicitudes
-    });
 
     if (!user) {
       return res.status(404).json({
@@ -268,29 +257,31 @@ const getRequests = async (req, res) => {
         message: "No está identificado, por favor, inicie sesión",
       });
     }
-    const arrayRequestToPromise = user.requests.map((requestId) =>
-      requestModel.findById(requestId)
-    );
-    const arrayRequest = await Promise.all(arrayRequestToPromise);
 
-    /*
-      La intención inicial era hacer un bucle "for" con el número de solicitudes, pero esto hace que haga un AWAIT SECUENCIAL:
-      Ej: "1ª ¿Se cumple? Sí, pues pasamos a la 2ª ¿Se cumple? Sí, a la tercera ID del array ¿Se cumple?" y asi sucesivamente.
+    // PREPARAMOS LA CONSULTA
+    // 1º creamos objeto query para la consulta de solicitudes
+    // --Buscar todas las ID del array user.request
+    let query = { _id: { $in: user.requests } };
 
-      Con el uso de Promise.all se ejecutan MÚLTIPLES PROMESAS SIMULTANEAS, iniciándose una búsqueda de todos los indices del array a la vez.
-      Esto mejora el rendimiento:
-      Si la protectora tiene 10 solicitudes no notaría la diferencia, pero si tiene 500 solicitudes, el tiempo de espera es bastante notable.
-    */
-    if (!arrayRequest) {
-      return res.status(404).json({
-        status: "failed",
-        message: "No existen solicitudes de adopcion",
-      });
+    // 2º ¿Se indica status? => Añadimos "status" al objeto query
+    if (status) {
+      query.status = status;
     }
+
+    // 3º Hacemos conteo de todos los documentos Request que coincidan con (query) el objeto de consulta de busqueda:
+    // (Este conteo es solo para mostrar el número de resultados)
+    const total = await requestModel.countDocuments(query);
+
+    // 4º Hacemos la consulta real
+    const requests = await requestModel
+      .find(query)
+      .skip((page - 1) * limit)
+      .limit(limit) //Iremos en limites a priori de 20 en 20 o 50 en 50 como máximo, se establece al principio del controller.
+      .exec(); //Método en Mongoose que se usa para ejecutar una consulta que devuelve una promesa
+
     return res.status(200).json({
       status: "success",
-      data: arrayRequest,
-      //Datos de visualizacion y carga:
+      data: requests,
       page,
       pages: Math.ceil(total / limit),
     });
