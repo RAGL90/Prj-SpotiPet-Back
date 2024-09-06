@@ -12,6 +12,7 @@ const {
   getShelter,
   modifyShelter,
   deleteShelter,
+  shelterAnimal,
   createAnimal,
   deleteAnimal,
   modifyAnimal,
@@ -31,6 +32,7 @@ router.post("/login", shelterLogin);
 router.post("/animal", verifyToken, createAnimal);
 
 //Modificaciones y eliminaciones del animal - TAREA: Falta solventar solicitudes en caso de delete del ANIMAL
+router.get("/animal", verifyToken, shelterAnimal);
 router.delete("/animal", verifyToken, deleteAnimal);
 router.patch("/animal", verifyToken, modifyAnimal);
 

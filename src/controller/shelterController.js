@@ -235,7 +235,53 @@ const deleteShelter = async (req, res) => {
 };
 
 // -------------------------------------MANIPULACION DEL MODELO ANIMALES --------------------------------------------------
+const shelterAnimal = async (req, res) => {
+  try {
+    const shelterId = req.user.shelterId;
 
+    if (!shelterId) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Sin autorización, por favor, inicie sesión",
+      });
+    }
+
+    const shelterData = await shelterModel.findById(shelterId);
+    if (!shelterData) {
+      return res.status(404).json({
+        status: "failed",
+        message:
+          "Protectora o Asociación no encontrada, no se puede entregar mensajes",
+      });
+    }
+    let shelterAnimals = [];
+
+    for (let animals of shelterData.animals) {
+      let animalFound = await animalModel.findById(animals);
+      if (animalFound) {
+        shelterAnimals.push(animalFound);
+      }
+    }
+
+    if (shelterAnimals.length === 0) {
+      return res.status(200).json({
+        status: "succeeded",
+        message: "Sin animales que mostrar",
+        data: [],
+      });
+    }
+    return res.status(200).json({
+      status: "succeded",
+      data: shelterAnimals,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "failed",
+      message: "No se ha podido obtener datos de animal",
+      error: error.message,
+    });
+  }
+};
 //-----------> CREAR ANIMAL
 const createAnimal = async (req, res, next) => {
   try {
@@ -638,6 +684,7 @@ module.exports = {
   getShelter,
   modifyShelter,
   deleteShelter,
+  shelterAnimal,
   createAnimal,
   deleteAnimal,
   modifyAnimal,

@@ -367,7 +367,7 @@ const choiceRequest = async (req, res) => {
       });
     }
 
-    // Revisamos que no esté aceptado ninguna otra solicitud para el mismo animal
+    // Revisamos que el animal no haya sido aceptado en otra solicitud
     const acceptedRequest = await requestModel.findOne({
       status: "accepted",
       reqAnimalId: request.reqAnimalId,
@@ -383,29 +383,39 @@ const choiceRequest = async (req, res) => {
     }
 
     const { choice, description } = req.body;
+
     const applyUser = await userModel.findById(request.applicantId);
     const animal = await animalModel.findById(request.reqAnimalId);
 
+    if (!animal) {
+      return res.status(404).json({
+        status: "failed",
+        message:
+          "No se puede determinar decisión, animal no localizado o eliminado de nuestra BBDD",
+      });
+    }
+
     if (choice === "accepted") {
       //Se decide aceptar solicitud buscamos al usuario de la solicitud para sumar en 1 el limite de animales (hasta 3).
+
       applyUser.animalLimit++;
-
-      if (!animal) {
-        return res.status(404).json({
-          status: "failed",
-          message: "Animal no encontrado",
-        });
-      }
-
       animal.status = "adopted";
       request.status = "accepted";
+      console.log(
+        "DESARROLLO: Sumamos limite de animal a ",
+        applyUser.animalLimit,
+        " - El estado del animal está en ",
+        animal.status,
+        " - y la solicitud está en ",
+        request.status
+      );
 
       await applyUser.save();
       await animal.save();
       await request.save();
 
-      if (animal.status === "adopted") {
-        //Abrimos este if para sacar del scope las mismas constantes que serán declaradas abajo en el email y no provocar conflictos.
+      //Abrimos este if, para sacar del scope las mismas constantes que serán declaradas en el email, sin provocar conflictos con el resto del sistema.
+      if (request.status === "accepted") {
         const messageSubject = `Spot My Pet 🐾 - ¡Felicidades! ¡Has sido seleccionado para adoptar a  ${animal.name}! 😄`;
         const message = await userInfoGrantedAdoption(
           applyUser.name,
@@ -419,13 +429,31 @@ const choiceRequest = async (req, res) => {
       //GENERAMOS CONTRATO PDF - Enviandole los objetos completos:
       await createAdoptionContract(applyUser, user, animal, requestId);
 
-      //Recopilamos todos los request en estado "pending"
+      //Recopilamos todas las solicitudes del animal que están pendientes de una decisión (En estado "pending") :
       const requests = await requestModel.find({
         reqAnimalId: animal._id,
         status: "pending",
       });
 
-      //Procedemos a enviarles el email:
+      /* 
+      Si la solicitud actual se acepta, rechazamos todas las demás solicitudes para el mismo animal, evitando trabajo innecesario a las protectoras.
+      
+      Con updateMany de Mongoose y filtrando el id del animal localizamos todas aquellas solicitudes del animal en estado "Pending".
+      Modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo y se lanza el email
+      */
+
+      await requestModel.updateMany(
+        { reqAnimalId: request.reqAnimalId, status: "pending" }, //Filtro de busqueda
+        {
+          //Accion para cada encuentro de la busqueda
+          $set: {
+            status: "refused",
+            refusedDescr: `Se ha cedido la mascota ${animal.name} a otro usuario ¡Lamentamos las molestias!`,
+          },
+        }
+      );
+
+      //Procedemos a enviarles a estos usuarios un email informandoles de que su solicitud no puede ser aceptada:
       if (requests) {
         //Habían solicitantes:
         //Procedemos a enviar su email informativo usando "For of" (de ES6) => Recorremos el array extraido en mongoose:
@@ -454,26 +482,16 @@ const choiceRequest = async (req, res) => {
           }
         }
       }
+      //Finalmente damos un return de Respuesta
+      return res.status(200).json({
+        status: "success",
+        message: `Declarado el nuevo estado de la solicitud a ACEPTADO`,
+      });
+    }
 
-      /* 
-      Si la solicitud se acepta, rechazamos todas las demás solicitudes para el mismo animal.
-      
-      Con updateMany de Mongoose y filtrando el id del animal localizamos todas aquellas solicitudes del animal en estado "Pending".
-      Modificamos que su estado pase a rechazado, indicando una descripción del motivo del rechazo y se lanza el email
-      */
-
-      await requestModel.updateMany(
-        { reqAnimalId: request.reqAnimalId, status: "pending" }, //Filtro de busqueda
-        {
-          //Accion para cada encuentro de la busqueda
-          $set: {
-            status: "refused",
-            refusedDescr: `Se ha cedido la mascota ${animal.name} a otro usuario ¡Lamentamos las molestias!`,
-          },
-        }
-      );
-    } else {
-      //La solicitud se ha rechazado por el propietario:
+    //La solicitud se ha rechazado por el propietario:
+    if (choice === "refused") {
+      //En el scope aún recibimos las constantes con los datos: request, applyUser y animal.
       request.status = "refused";
       request.refusedDescr = description; //Motivos de negación de la solicitud (si la protectora quiere expresarlo)
       await request.save();
@@ -485,10 +503,17 @@ const choiceRequest = async (req, res) => {
         request.refusedDescr
       );
       await emailService.sendEmail(applyUser.email, messageSubject, message);
+
+      return res.status(200).json({
+        status: "success",
+        message: `Declarado el estado de la solicitud a DENEGADA`,
+      });
     }
-    return res.status(200).json({
-      status: "success",
-      message: `Declarado el nuevo estado de la solicitud a ${choice}`,
+
+    return res.status(400).json({
+      status: "failed",
+      message:
+        "No se ha recibido correctamente la decisión, por lo que no se ha ejecutado ninguna acción",
     });
   } catch (error) {
     res.status(500).json({
