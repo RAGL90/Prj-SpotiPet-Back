@@ -389,6 +389,7 @@ const createAnimal = async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: `La mascota ${newAnimal.name} está creada correctamente`,
+      animalId: newAnimal._id,
       error: null,
     });
 
@@ -589,6 +590,7 @@ const modifyAnimal = async (req, res) => {
       animal.mainColor = newAnimalData.mainColor || animal.mainColor;
       animal.description = newAnimalData.description || animal.description;
       animal.urgent = newAnimalData.urgent || animal.urgent;
+      animal.cost = newAnimalData.cost || animal.cost;
 
       await animal.save(); // Guardamos cambios
       const time = timeStamp();
