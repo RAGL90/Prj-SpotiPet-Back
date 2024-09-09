@@ -65,8 +65,6 @@ const createRequest = async (req, res) => {
     }
     //Filtro 3. ¿El animal está disponible?
     if (animal.status != "available") {
-      console.log(animal.status);
-
       return res.status(403).json({
         status: "failed",
         message: "Animal ya adoptado, imposible generar solicitud",
@@ -113,8 +111,8 @@ const createRequest = async (req, res) => {
     }
 
     //Every => https://developer.mozilla.org/es/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-    //LaSi se encuentran todos los datos entra en el bloque:
 
+    //Si se encuentran todos los datos entra en el bloque:
     //Filtro 5. REVISAMOS MAYORÍA DE EDAD
     const applyDate = new Date(); //Usaremos esta constante para crear la solicitud (requestModel)
     const ageDiff = applyDate - applicantUser.birth; //Restamos con la fecha de nacimiento para saber la mayoría de edad actual (Resultado en ms)
@@ -166,7 +164,7 @@ const createRequest = async (req, res) => {
     //El usuario ha pasado todos los controles => RECOGEMOS DATOS DEL .owner DEL ANIMAL:
     actualOwnerId = animal.owner.ownerId; //Extraemos ID
 
-    //Elaboración de ficha de request en funcion del tipo de propietario.
+    //Obtención de datos del propietario de la mascota, en función del tipo de propietario busca un modelo u otro
     let transfer;
     if (animal.owner.ownerType === "adopter") {
       transfer = await userModel.findById(actualOwnerId);
@@ -209,27 +207,29 @@ const createRequest = async (req, res) => {
       transferLocality: transfer.locality,
     });
 
-    await newRequest.save();
+    if (newRequest) {
+      await newRequest.save();
+      console.log("Yo debo aparecer aqui!");
+      transfer.requests.push(newRequest._id); //Se introduce ID de la solicitud en Solicitudes Recibidas
+      applicantUser.applications.push(newRequest._id); //Aqui en Solicitudes Enviadas
+      await transfer.save();
+      await applicantUser.save();
 
-    transfer.requests.push(newRequest._id); //Se introduce ID de la solicitud en Solicitudes Recibidas
-    applicantUser.applications.push(newRequest._id); //Aqui en Solicitudes Enviadas
+      const time = timeStamp();
+      console.log(
+        `${time} Solicitud de ${applicantUser.name} para ${animal.name}, propietario: ${transfer.name}`
+      );
 
-    await transfer.save();
-    await applicantUser.save();
+      //EMAIL SERVICE (falta por añadir)
 
-    const time = timeStamp();
-    console.log(
-      `${time} Solicitud de ${applicantUser.name} para ${animal.name}, propietario: ${transfer.name}`
-    );
-
-    //EMAIL SERVICE
-
-    res.status(201).json({
-      status: "succeed",
-      message: "Solicitud creada correctamente",
-      newRequest,
-    });
+      return res.status(201).json({
+        status: "succeed",
+        message: "Solicitud creada correctamente",
+        newRequest,
+      });
+    }
   } catch (error) {
+    console.error("Validation error:", error.errors); // Imprime el error de validación
     return res.status(500).json({
       status: "failed",
       message: "No se puede completar la solicitud de adopcion",

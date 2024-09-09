@@ -56,7 +56,7 @@ const upload = multer({
     fileSize: 6 * 1000 * 1000, //6MB como limite de peso - el valor se indica en Bytes
   },
   fileFilter: (req, file, cb) => {
-    const fileAccepted = /jpeg|jpg|png|gif|tif|svg|webp/;
+    const fileAccepted = /jpeg|jpg|png|gif|tif|svg|webp|jfif/;
     const mimetype = fileAccepted.test(file.mimetype); // Es un test (true o false) MimeType indica la extension del archivo, ej: mimetype: "image/jpeg"
     /*
     La biblioteca Path tiene incorporada funciones utiles:

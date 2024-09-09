@@ -43,7 +43,7 @@ router.patch("/request/:requestId", verifyToken, choiceRequest);
 
 //Modificaciones y eliminaciones del Shelter - TAREA: Falta solventar solicitudes en caso de delete de la protectora.
 router.get("/panel", verifyToken, getShelter);
+router.delete("/panel/", verifyToken, deleteShelter);
 router.patch("/panel/:id", verifyToken, modifyShelter);
-router.delete("/panel/:id", verifyToken, deleteShelter);
 
 module.exports = router;

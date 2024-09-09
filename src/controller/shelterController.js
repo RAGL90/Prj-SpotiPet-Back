@@ -184,7 +184,7 @@ const modifyShelter = async (req, res) => {
     console.log(shelter);
     const time = timeStamp();
     console.log(
-      `${time} Protectora ${newShelter.name} Modificada correctamente`
+      `${time} Protectora ${newShelterData.name} Modificada correctamente`
     );
     res.status(201).json({
       status: "success",
@@ -206,24 +206,107 @@ const deleteShelter = async (req, res) => {
     const shelterId = req.user.shelterId;
     const shelterData = await shelterModel.findById(shelterId);
 
+    if (!shelterData) {
+      return res.status(404).json({
+        status: "failed",
+        message:
+          "Asociacion o protectora no encontrada, inicie sesion por favor",
+      });
+    }
+
+    console.log("Proceso de eliminación de Protectora: ", shelterData.name);
+
+    // 1º COMPROBAMOS SI TENÍAN SOLICITUDES
+    if (shelterData.requests != 0) {
+      //Si tiene solciitudes => buscar y rechazar todas las solicitudes pendientes indicando el motivo a los usuarios vía email.
+      //Solo obtendremos las solicitudes en "pending"
+      const requests = await requestModel.find({
+        transferType: shelterId,
+        status: "pending",
+      });
+
+      if (requests) {
+        //1.1 Habían solicitantes:
+        console.log(
+          "La protectora ",
+          shelterData.name,
+          " tenía solicitudes pendientes."
+        );
+        //1.1.1 Procedemos a enviar su email:
+        for (const request of requests) {
+          //Generamos asunto:
+          const messageSubject = `Spot My Pet 🐾 - Actualización sobre tu solicitud de adopción de ${request.reqAnimalName}`;
+          //Usamos try para generar promesa (porque el envío de email puede fallar)
+          try {
+            //Generamos mensaje con la plantilla para informar al usuario de una mascota eliminada
+            const message = await userInfoDeletedPet(
+              request.applicantName,
+              request.reqAnimalName
+            );
+
+            //Llamamos a nodemailer - Enviando asunto y plantilla generada
+            await emailService.sendEmail(
+              request.applicantEmail,
+              messageSubject,
+              message
+            );
+          } catch (error) {
+            //Capturamos posible error:
+            console.error(
+              `Error al enviar email a ${request.applicantEmail}: ${error}`
+            );
+          }
+        }
+        //1.1.2 Actualizar solicitudes de "pending" a "refused" después de enviar los emails
+        await requestModel.updateMany(
+          {
+            transferId: shelterId,
+            status: "pending",
+          },
+          {
+            $set: { status: "refused" },
+          }
+        );
+      }
+    }
+
+    //2 BUSCAMOS SUS ANIMALES SUBIDOS QUE ESTÉN DISPONIBLES:
+    if (shelterData.animals.length != 0) {
+      const animals = await animalModel.find({
+        "owner.ownerId": shelterId,
+        status: "available",
+      });
+
+      //2.1 Habían animales?
+      if (animals.length > 0) {
+        //Cada animal localizado sin adopción se eliminará de la base de datos
+
+        for (const animal of animals) {
+          await animalModel.findByIdAndDelete(animal._id);
+        }
+      }
+    }
+
+    //Procedemos al borrado => (if de seguridad) aunque lo normal es que si estaba en esta ruta, esté identificado
     if (shelterData) {
       await shelterModel.findByIdAndDelete(shelterId);
-      res.status(200).json({
-        status: "success",
-        message: "Datos de protectora eliminados satisfactoriamente",
-        error: null,
-      });
       const time = timeStamp();
       console.log(
         `${time} Protectora ${shelterData.name} eliminada correctamente`
       );
-    } else {
-      res.status(404).json({
-        status: "failed",
-        message: "No localizada la protectora",
-        error: "Protectora no localizada",
+      return res.status(200).json({
+        status: "success",
+        message: "Datos de protectora eliminados satisfactoriamente",
+        error: null,
       });
     }
+
+    //Si llega aquí hay algún problema no contemplado
+    return res.status(500).json({
+      status: "failed",
+      message: "Alcance de ruta no contemplada",
+      error: "Alcance de ruta no contemplada",
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({

@@ -110,7 +110,7 @@ const applySchema = new Schema({
   },
   reqAnimalSize: {
     type: String,
-    enum: ["Grande", "Mediano", "Pequeño"],
+    enum: ["Grande", "Mediano", "Pequeño", ""],
     required: false,
     index: true,
   },
