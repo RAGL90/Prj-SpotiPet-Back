@@ -3,7 +3,7 @@ const animalModel = require("../models/animalModel");
 
 //LECTURA DEL ANIMAL - ESTA SERÁ LA CONSULTA DE LOS ANIMALES Y NO REQUIERE DE REGISTRO DE USUARIO:
 const getAnimals = async (req, res) => {
-  let { page, limit, name, gender, specie, size, breed, province } = req.query;
+  let { page, limit, name, gender, specie, size, breed, location } = req.query;
   //Necesitamos operar con números por lo que convertimos String => Numbers
   page = parseInt(page) || 1; // Si no se indica, default: 1
   limit = parseInt(limit) || 20; // default: 20
@@ -29,8 +29,8 @@ const getAnimals = async (req, res) => {
   if (size && size.trim()) {
     filters.size = size;
   }
-  if (province && province.trim()) {
-    filters.province = province;
+  if (location && location.trim()) {
+    filters.location = location;
   }
 
   try {
