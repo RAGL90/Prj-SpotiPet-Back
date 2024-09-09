@@ -238,7 +238,7 @@ const createRequest = async (req, res) => {
   }
 };
 
-//-----------------CONSULTA DE SOLICITUDES - PROTECTORA
+//-----------------CONSULTA DE SOLICITUDES - PROTECTORA y USUARIOS
 const getRequests = async (req, res) => {
   let { page = 1, limit = 20, status } = req.query;
   limit = Math.min(limit, 50); // Límite máximo de 50 para evitar consultas masivas
@@ -260,7 +260,7 @@ const getRequests = async (req, res) => {
 
     // PREPARAMOS LA CONSULTA
     // 1º creamos objeto query para la consulta de solicitudes
-    // --Buscar todas las ID del array user.request
+    // --Buscar todas las ID del array user.requests (requests es compartido tanto por usuarios como shelters)
     let query = { _id: { $in: user.requests } };
 
     // 2º ¿Se indica status? => Añadimos "status" al objeto query
@@ -315,6 +315,7 @@ const userReadRequest = async (req, res) => {
     const arrayApplicationToPromise = user.applications.map((requestId) =>
       requestModel.findById(requestId)
     );
+    //Generamos array con todas las solicitudes
     const arrayApplications = await Promise.all(arrayApplicationToPromise);
 
     const page = parseInt(req.query.page) || 1;
