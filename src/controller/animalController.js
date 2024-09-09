@@ -1,18 +1,41 @@
 //Recogemos model de Animal
 const animalModel = require("../models/animalModel");
-const userModel = require("../models/userModels");
 
 //LECTURA DEL ANIMAL - ESTA SERÁ LA CONSULTA DE LOS ANIMALES Y NO REQUIERE DE REGISTRO DE USUARIO:
 const getAnimals = async (req, res) => {
-  let { page, limit } = req.query;
+  let { page, limit, name, gender, specie, size, breed, province } = req.query;
   //Necesitamos operar con números por lo que convertimos String => Numbers
   page = parseInt(page) || 1; // Si no se indica, default: 1
   limit = parseInt(limit) || 20; // default: 20
   limit = limit > 50 ? 50 : limit; //Ternario para no hacer una consulta enorme en el endpoint
 
+  // Creamos un objeto para establecer un filtro dinámico (Lo principal es que busque animales disponibles)
+  const filters = { status: "available" };
+
+  // Si se pasan parámetros de búsqueda => iremos agregando estos campos a los filtros
+  // && param.trim()) para asegurarse de que solo los parámetros no vacíos se añadan al objeto de filtros.
+  if (name && name.trim()) {
+    filters.name = { $regex: name, $options: "i" }; // Búsqueda insensible a mayúsculas/minúsculas
+  }
+  if (gender && gender.trim()) {
+    filters.gender = gender;
+  }
+  if (specie && specie.trim()) {
+    filters.specie = specie; // Filtrado por especie
+  }
+  if (breed && breed.trim()) {
+    filters.breed = { $regex: breed, $options: "i" }; // Búsqueda por raza
+  }
+  if (size && size.trim()) {
+    filters.size = size;
+  }
+  if (province && province.trim()) {
+    filters.province = province;
+  }
+
   try {
     const animals = await animalModel
-      .find({ status: "available" }) //Los adoptados estarán excluidos de la búsqueda general
+      .find(filters)
       .sort({ urgent: -1, registerDate: 1 })
       .skip((page - 1) * limit)
       .limit(limit)

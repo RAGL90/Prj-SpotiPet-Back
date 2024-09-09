@@ -429,6 +429,9 @@ const createAnimal = async (req, res, next) => {
       });
     }
 
+    //Modificamos la ficha de la protectora para que vea en su panel el nuevo animal registrado
+    let shelter = await shelterModel.findById(shelterId);
+
     const registerDate = new Date();
     //Finalmente creamos el nuevo animal
     const newAnimal = new animalModel({
@@ -444,6 +447,7 @@ const createAnimal = async (req, res, next) => {
       physicFeatures,
       mainColor,
       description,
+      location: shelter.province,
       cost,
       photo,
       urgent,
@@ -463,8 +467,6 @@ const createAnimal = async (req, res, next) => {
       `${time} Nueva mascota: ${newAnimal.name} , tipo ${newAnimal.specie} - Creado correctamente`
     );
 
-    //Modificamos la ficha de la protectora para que vea en su panel el nuevo animal registrado
-    let shelter = await shelterModel.findById(shelterId);
     shelter.animals.push(newAnimal._id);
     await shelter.save();
 
