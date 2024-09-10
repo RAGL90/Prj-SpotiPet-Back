@@ -676,6 +676,7 @@ const modifyAnimal = async (req, res) => {
       animal.description = newAnimalData.description || animal.description;
       animal.urgent = newAnimalData.urgent || animal.urgent;
       animal.cost = newAnimalData.cost || animal.cost;
+      animal.photo = newAnimalData.photo || animal.photo;
 
       await animal.save(); // Guardamos cambios
       const time = timeStamp();
