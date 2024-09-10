@@ -140,7 +140,7 @@ function createAdoptionContract(adoptante, cedente, animal, requestId) {
 
     doc
       .text(
-        `Reunidos, de una parte, ${cedente.name} ${adoptante.lastname} con ${cedente.tipoNIF} ${cedente.NIF}, domicilio en ${cedente.address} y teléfono ${cedente.phone}, en adelante denominado como CEDENTE, y de otra parte, ${adoptante.name} ${adoptante.lastname} con ${adoptante.tipoNIF} ${adoptante.nif}, domicilio en ${adoptante.address} y teléfono ${adoptante.phone}, en adelante denominado como ADOPTANTE, que el adoptante desea adoptar definitivamente al animal que responde a las siguientes características:`,
+        `Reunidos, de una parte, ${cedente.name} con ${cedente.tipoNIF} ${cedente.NIF}, domicilio en ${cedente.address} y teléfono ${cedente.phone}, en adelante denominado como CEDENTE, y de otra parte, ${adoptante.name} ${adoptante.lastname} con ${adoptante.tipoNIF} ${adoptante.NIF}, domicilio en ${adoptante.address} y teléfono ${adoptante.phone}, en adelante denominado como ADOPTANTE, que el adoptante desea adoptar definitivamente al animal que responde a las siguientes características:`,
         { align: "justify" }
       )
       .moveDown(1);

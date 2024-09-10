@@ -209,7 +209,6 @@ const createRequest = async (req, res) => {
 
     if (newRequest) {
       await newRequest.save();
-      console.log("Yo debo aparecer aqui!");
       transfer.requests.push(newRequest._id); //Se introduce ID de la solicitud en Solicitudes Recibidas
       applicantUser.applications.push(newRequest._id); //Aqui en Solicitudes Enviadas
       await transfer.save();
@@ -395,6 +394,13 @@ const choiceRequest = async (req, res) => {
           "No se puede determinar decisión, animal no localizado o eliminado de nuestra BBDD",
       });
     }
+    if (!user) {
+      return res.status(404).json({
+        status: "failed",
+        message:
+          "No se puede determinar decisión, usuario no localizado o eliminado de nuestra BBDD",
+      });
+    }
 
     if (choice === "accepted") {
       //Se decide aceptar solicitud buscamos al usuario de la solicitud para sumar en 1 el limite de animales (hasta 3).
@@ -402,14 +408,6 @@ const choiceRequest = async (req, res) => {
       applyUser.animalLimit++;
       animal.status = "adopted";
       request.status = "accepted";
-      console.log(
-        "DESARROLLO: Sumamos limite de animal a ",
-        applyUser.animalLimit,
-        " - El estado del animal está en ",
-        animal.status,
-        " - y la solicitud está en ",
-        request.status
-      );
 
       await applyUser.save();
       await animal.save();
@@ -428,6 +426,13 @@ const choiceRequest = async (req, res) => {
         await emailService.sendEmail(applyUser.email, messageSubject, message);
       }
       //GENERAMOS CONTRATO PDF - Enviandole los objetos completos:
+      console.log(
+        "Datos enviados a contrato",
+        "Protectora:",
+        user,
+        " Usuario solicitante",
+        applyUser
+      );
       await createAdoptionContract(applyUser, user, animal, requestId);
 
       //Recopilamos todas las solicitudes del animal que están pendientes de una decisión (En estado "pending") :
