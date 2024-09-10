@@ -1,3 +1,4 @@
+//-------- CARGA DE BIBLIOTECAS
 //Carga básica de Express y su funcion Router
 const express = require("express");
 const router = express.Router();
@@ -14,6 +15,8 @@ const fs = require("fs");
 //Carga de UUID para incrustar nombres únicos a los archivos:
 const { v4: uuidv4 } = require("uuid");
 
+//--------
+
 //Carga de Modelos de datos
 const animalModel = require("../models/animalModel");
 
@@ -21,7 +24,7 @@ const animalModel = require("../models/animalModel");
 const timeStamp = require("../core/utils/timeStamp");
 // const { version } = require("os");
 
-// Usamos un objeto con CONFIGURACION de Multer - El destino cambia según el req.params       ******** CONFIG
+// Usamos un objeto con CONFIGURACION de Multer - El destino cambia según el req.params  o el animalID     ******** CONFIG
 const storage = multer.diskStorage({
   //Guardamos en disco (No en memoria)
   destination: function (req, file, cb) {
