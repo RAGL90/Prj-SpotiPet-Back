@@ -56,6 +56,7 @@ const createRequest = async (req, res) => {
 
     //Filtro 2. ¿El animal existe en la BBDD?
     const animal = await animalModel.findById(animalId);
+    // console.log("DATOS DE ANIMAL: ", animal);
 
     if (!animal) {
       return res.status(404).json({
@@ -75,6 +76,8 @@ const createRequest = async (req, res) => {
     const { userId, email, userType, name } = req.user;
     applicantUser = await userModel.findById(userId);
 
+    // console.log("DATOS DEL APPLICANT: ", applicantUser);
+
     //Filtro 4. ¿El usuario nos ha proporcionado los datos necesarios?
     /* 
         Gran parte de los datos de User son opcionales por si un usuario quiere registrarse sin proporcionar datos , pero si
@@ -93,15 +96,20 @@ const createRequest = async (req, res) => {
       "birth",
     ];
 
-    //Revisamos con Every que todos los campos requeridos se encuentren Y que sea adopter:
-    if (!requiredFields.every((field) => applicantUser[field])) {
+    // Revisamos qué campos requeridos están vacíos
+    const missingFields = requiredFields.filter(
+      (field) => !applicantUser[field]
+    );
+
+    // Si hay campos faltantes, devolvemos un error con los detalles específicos
+    if (missingFields.length > 0) {
       return res.status(400).json({
         status: "failed",
-        message:
-          "Indique los siguientes datos en su perfil: NIF, Nombre, Apellidos, Teléfono, Localidad, Provincia, Dirección y Edad para realizar una solicitud de adopción",
+        message: `Faltan por completar los siguientes campos en su perfil: ${missingFields.join(
+          ", "
+        )} para realizar una solicitud de adopción.`,
       });
     }
-
     if (applicantUser.userType !== "adopter") {
       return res.status(402).json({
         status: "failed",
@@ -172,6 +180,8 @@ const createRequest = async (req, res) => {
       transfer = await shelterModel.findById(actualOwnerId);
     }
 
+    // console.log("DATOS DE TRANSFER: ", transfer);
+
     const newRequest = new requestModel({
       applyDate,
       status: "pending",
@@ -228,11 +238,26 @@ const createRequest = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Validation error:", error.errors); // Imprime el error de validación
+    console.error("Validation error:", error); // Cambiado para imprimir el objeto error completo si está disponible.
+
+    let errorMessage =
+      "No se puede completar la solicitud de adopción. Por favor, intente más tarde.";
+
+    // Verifica si el error tiene un mensaje específico o errores detallados.
+    if (error.message) {
+      errorMessage = `Error al procesar la solicitud: ${error.message}`;
+    }
+    if (error.errors) {
+      // Puedes mejorar esto para incluir detalles específicos de cada error si es necesario.
+      const detailedErrors = Object.keys(error.errors)
+        .map((key) => `${key}: ${error.errors[key].message}`)
+        .join(", ");
+      errorMessage += ` Detalles: ${detailedErrors}`;
+    }
+
     return res.status(500).json({
       status: "failed",
-      message: "No se puede completar la solicitud de adopcion",
-      error: error.message,
+      message: errorMessage,
     });
   }
 };

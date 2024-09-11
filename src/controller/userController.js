@@ -35,6 +35,10 @@ const signup = async (req, res) => {
       phone,
     } = req.body;
 
+    //RECIBIMOS DEL FRONT birthDate.
+    //Generamos variable "Birth", que es la que guardamos, porque birthDate pasará un proceso de transformación UTC
+    console.log("Recibimos de birthDate", birthDate);
+
     let birth = null;
 
     if (birthDate) {
@@ -45,6 +49,7 @@ const signup = async (req, res) => {
 
       //Le restamos 1 al mes porque empieza en 0
       birth = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+      console.log("La fecha era ", birthDate, " y ahora es: ", birth);
     }
 
     const registerDate = new Date();
@@ -897,7 +902,8 @@ const userAnimals = async (req, res) => {
       //Si el array del usuario está vacío, es correcto no daremos un error pero si un mensaje
       return res.status(200).json({
         status: "succeeded",
-        data: "Sin animales que mostrar",
+        message: "Sin animales que mostrar",
+        data: [],
       });
     }
     return res.status(200).json({

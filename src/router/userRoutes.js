@@ -39,15 +39,11 @@ router.patch("/animal", verifyToken, modifyAnimal);
 router.delete("/animal", verifyToken, deleteAnimal);
 
 //Zona de rutas para solicitudes:
-//Lectura de TODAS las solicitudes recibidas
-router.get("/requests", verifyToken, getRequests);
-//Lectura de una solicitud en concreto recibida
-router.get("/request/", verifyToken, userReadRequest);
-//Conseguir contrato adopción
-router.get("/request/:requestId", verifyToken, getContract);
-//Crear y enviar una solicitud
-router.post("/request/:animalId", verifyToken, createRequest);
-//Decidir una solicitud recibida
-router.patch("/request/:requestId", verifyToken, choiceRequest);
+
+router.get("/requests", verifyToken, getRequests); //Lectura de TODAS las solicitudes recibidas
+router.get("/request/", verifyToken, userReadRequest); //Lectura de UNA solicitud en concreto recibida
+router.get("/request/:requestId", verifyToken, getContract); //Obtener contrato adopción específico
+router.post("/request/:animalId", verifyToken, createRequest); //Crear y enviar una solicitud
+router.patch("/request/:requestId", verifyToken, choiceRequest); //Decidir una solicitud recibida
 
 module.exports = router;

@@ -6,17 +6,17 @@ const NIFverifier = (tipoNIF, NIF) => {
     raro: false,
   };
   if (tipoNIF === "DNI") {
-    const letrasControl = "TRWAGMYFPDXBNJZSQVHLCKE";
+    const letrasControl = "TRWAGMYFPDXBNJZSQVHLCKE"; //REVISAR POSICIONES
 
     const numero = NIF.substring(0, NIF.length - 1); // Recogemos los números
-    const letra = NIF.charAt(NIF.length - 1).toUpperCase(); // Corrección aquí: cambié dni.length a NIF.length
+    const letra = NIF.charAt(NIF.length - 1).toUpperCase();
 
     if (!/^\d{8}[A-Za-z]$/.test(NIF)) {
       response.invalidCause = "Formato de DNI no válido";
       return response;
     }
 
-    const indice = parseInt(numero) % 23; // Asegúrate de convertir el número a entero
+    const indice = parseInt(numero) % 23; // Cogemos el resto de 23 y nos aseguramos de crear un numero
 
     if (letrasControl.charAt(indice) === letra) {
       response.valid = true;
