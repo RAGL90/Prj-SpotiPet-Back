@@ -7,7 +7,7 @@ const cors = require("cors");
 const path = require("path");
 
 const mongoose = require("mongoose");
-const PORT = 9000;
+const PORT = process.env.PORT || 9000;
 
 //AREA ROUTERS
 const userRouter = require("./router/userRoutes");
