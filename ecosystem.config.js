@@ -8,7 +8,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         DATABASE_URL:
-          "mongodb+srv://usuario:contraseña@finalclass.gjvglcn.mongodb.net/SpotMyPet?retryWrites=true&w=majority&appName=SpotMyPet",
+          "mongodb+srv://ricgarlue:ricgarlue@finalclass.gjvglcn.mongodb.net/SpotMyPet?retryWrites=true&w=majority&appName=SpotMyPet",
         PORT: 9000, // Si usas la variable PORT en tu aplicación
         // Otras variables de entorno
       },
