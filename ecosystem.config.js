@@ -3,18 +3,16 @@ module.exports = {
     {
       name: "SpotMyPet-Backend",
       script: "app.js",
-      cwd: "/root/Prj-SpotiPet-Back",
+      cwd: "/home/appuser/Prj-SpotiPet-Back/src/",
+      interpreter: "/home/appuser/.nvm/versions/node/v18.20.4/bin/node",
       watch: false,
       env: {
         NODE_ENV: "production",
-        DATABASE_URL:
-          "mongodb+srv://ricgarlue:ricgarlue@finalclass.gjvglcn.mongodb.net/SpotMyPet?retryWrites=true&w=majority&appName=SpotMyPet",
-        PORT: 9000, // Si usas la variable PORT en tu aplicación
+        DATABASE_URL: process.env.DATABASE_URL,
+        PORT: 9000,
         // Otras variables de entorno
       },
       log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "/root/.pm2/logs/SpotMyPet-Backend-error.log",
-      out_file: "/root/.pm2/logs/SpotMyPet-Backend-out.log",
       merge_logs: true,
     },
   ],
