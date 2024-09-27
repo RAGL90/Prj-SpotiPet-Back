@@ -4,7 +4,7 @@
   "author": "Ricardo RAGL90",
   "scripts": {
     "dev": "nodemon ./src/app.js",
-    "start": "node ./src/app.js"
+    "start": "next start -p 3001"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
